@@ -197,32 +197,22 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
 <main class="wrap">
   <!-- INICIO -->
   <section id="v-inicio" class="view active">
+    <h2>Resumen 2026</h2>
+    <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
+    <h2>En qué se va la plata · 2026</h2>
+    <div class="card" id="gastosVizCard"><div class="state">Cargando…</div></div>
+    <p class="tiny">Números en vivo desde tu hoja COZ_Gastos_y_Ventas.</p>
+  </section>
+
+  <!-- SUELDO -->
+  <section id="v-sueldo" class="view">
     <h2>Cómo va el negocio</h2>
     <div class="card" id="ganCard"><div class="state">Cargando…</div></div>
-
     <h2>Tu sueldo</h2>
     <div class="card" id="metaCard">
       <div class="meta-top"><b id="metaLbl">Tu sueldo</b><button class="mini" id="editMeta">Editar</button></div>
       <div id="metaBody"></div>
     </div>
-
-    <h2>Este mes · julio</h2>
-    <div class="card" id="mesCard"><div class="state">Cargando…</div></div>
-
-    <div class="showall" id="showAll">Ver todos los números ▾</div>
-    <div id="detalle" style="display:none">
-      <h2>Resultado del año</h2>
-      <div class="card" id="anioCard"></div>
-      <h2>Gastos 2026</h2>
-      <div class="card" id="gastosCard"></div>
-      <h2>Caja del mes · detalle</h2>
-      <div class="card" id="cajaCard"></div>
-      <p class="tiny">Fuente: hoja <b>COZ_Gastos_y_Ventas</b> · pestaña LECTURA. El IVA es pass-through: no afecta la utilidad real.</p>
-    </div>
-  </section>
-
-  <!-- CAJA -->
-  <section id="v-caja" class="view">
     <h2>Lo que tengo hoy</h2>
     <div class="card"><div class="reschip"><span class="rl">En el banco</span><span class="rv" id="cajaHoyBig">—</span></div>
       <div class="oneline">Plata disponible en la cuenta ahora mismo.</div></div>
@@ -230,7 +220,6 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
     <div class="card" id="cajaMes"><div class="state">Cargando…</div></div>
     <h2>Hay que pagar</h2>
     <div class="card" id="cajaPagos"><div class="state">Cargando…</div></div>
-    <p class="tiny">Sale de la sección "Julio · caja del mes" de tu hoja. Cuando agregues los pagos del próximo mes ahí, aparecen aquí.</p>
   </section>
 
   <!-- PROYECTOS -->
@@ -272,7 +261,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
 
 <nav>
   <button data-v="inicio" class="on">Inicio</button>
-  <button data-v="caja">Caja</button>
+  <button data-v="sueldo">Sueldo</button>
   <button data-v="proyectos">Proyectos</button>
   <button data-v="pendientes">Pendientes<span class="dot" id="navDot" style="display:none">0</span></button>
   <button data-v="agenda">Agenda</button>
@@ -407,7 +396,7 @@ let VENTAS=0, UTIL=0, UTILREAL=0, CAJAPROJ=0;
 async function loadInicio(){
   const d=await call(T_DRIVE,{fileId:F_MAIN});
   const md=d.fileContent||d.text;
-  if(d.__err||!md){ $('ganCard').innerHTML='<div class="state err">No pude leer el maestro. Toca Recargar arriba.</div>'; return; }
+  if(d.__err||!md){ $('kpis').innerHTML='<div class="state err" style="grid-column:1/3">No pude leer el maestro. Toca Actualizar.</div>'; return; }
   const rows=parseTable(md);
   const L=rows.filter(r=>r[0]).map(r=>[r[0], r[1]!==undefined?r[1]:'']);
   const map={}; L.forEach(r=>{ if(r[1]!=='') map[r[0].toLowerCase()]=r[1]; });
@@ -416,15 +405,41 @@ async function loadInicio(){
   const between=(a,b)=>{const i=idxOf(a),j=idxOf(b); if(i<0)return[]; const end=j<0?L.length:j; return L.slice(i+1,end).filter(r=>r[1]!=='');};
 
   const ventas=toNum(g('ventas 2026 pagadas')), nv=g('n ventas')||'0', util=toNum(g('utilidad coco')),
-        arrastre=toNum(g('arrastre 2025')), cobrar=toNum(g('por cobrar (saldos')), abonos=toNum(g('abonos recibidos')),
+        cobrar=toNum(g('por cobrar (saldos')), abonos=toNum(g('abonos recibidos')),
         pipe=toNum(g('pipeline prospectos')), prod=toNum(g('en produccion / abono')), gastos=toNum(g('gastos 2026 (neto)')),
-        sii=g('subir sii')||'0', proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
+        proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
   const telas=toNum(g('costo de telas')), imp=toNum(g('impuestos (iva')), oper=toNum(g('operaci'));
   const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar julio'));
   VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
-  const margen=ventas>0?(util/ventas*100):0;
 
-  // Cómo va el negocio — dona: ya ganado vs por venir
+  // INICIO — panel de KPIs (normal)
+  const K=[
+    ['Ventas pagadas', clp(ventas), nv+' ventas · 2026', 'hero'],
+    ['Utilidad', clp(util), 'de lo pagado', ''],
+    ['Gastos 2026', clp(gastos), 'neto', ''],
+    ['Por cobrar', clp(cobrar), 'saldos confirmados', ''],
+    ['En producción', clp(prod), 'con abono', ''],
+    ['Pipeline', clp(pipe), 'prospectos', ''],
+    ['Plata recibida', clp(abonos), 'abonos al día', 'wide'],
+  ];
+  $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
+
+  // INICIO — barra apilada de gastos por categoría
+  const gtot=telas+imp+oper||1;
+  $('gastosVizCard').innerHTML=
+    `<div style="display:flex;height:24px;border-radius:9px;overflow:hidden;border:1px solid var(--line)">
+       <div style="width:${(telas/gtot*100).toFixed(1)}%;background:#6f6fc9"></div>
+       <div style="width:${(imp/gtot*100).toFixed(1)}%;background:#c69a4a"></div>
+       <div style="width:${(oper/gtot*100).toFixed(1)}%;background:#7a8450"></div>
+     </div>
+     <div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px;text-align:center">
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#6f6fc9;margin-right:5px"></span>TELAS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(telas)}</div></div>
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#c69a4a;margin-right:5px"></span>IMPUESTOS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(imp)}</div></div>
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#7a8450;margin-right:5px"></span>OPERACIÓN</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(oper)}</div></div>
+     </div>
+     <div class="oneline">Total gastos 2026: <b>${clp(gastos)}</b>. El IVA es plata que pasa del cliente al SII — no daña tu utilidad.</div>`;
+
+  // SUELDO — dona: ya ganado vs por venir
   const totalU=util+utilReal, frG=totalU>0?util/totalU:0;
   $('ganCard').innerHTML=
     `<div class="donut-wrap">${donut(frG)}
@@ -437,44 +452,8 @@ async function loadInicio(){
 
   renderMeta();
 
-  // Este mes — entra / sale / queda
-  const entra=cajaHoy+ctelas+clanima, sale=pagar, mx=Math.max(entra,sale,1);
-  $('mesCard').innerHTML=
-    `<div class="reschip ${proj<0?'neg':''}"><span class="rl">Te queda a fin de mes</span><span class="rv">${clpShort(proj)}</span></div>
-     <div class="mesbars">
-       <div class="mesrow"><span class="ml">Entra</span><div class="mestrack"><i style="width:${(entra/mx*100).toFixed(0)}%;background:var(--ok)"></i></div><span class="mv">${clpShort(entra)}</span></div>
-       <div class="mesrow"><span class="ml">Sale</span><div class="mestrack"><i style="width:${(sale/mx*100).toFixed(0)}%;background:var(--bad)"></i></div><span class="mv">${clpShort(sale)}</span></div>
-     </div>
-     <div class="oneline">Lo que tienes en el banco, más lo que te van a pagar, menos lo que debes pagar este mes.</div>`;
-
-  // ---- Detalle (oculto por defecto) ----
-  $('anioCard').innerHTML=
-    row('Ventas pagadas (neto)', clp(ventas))+
-    row('N.º de ventas', nv)+
-    row('Utilidad ya ganada', clp(util))+
-    row('Margen sobre ventas', margen.toFixed(1)+'%')+
-    row('Utilidad por venir', clp(utilReal))+
-    (arrastre? `<div class="note"><b>Nota:</b> el N°70 de La Mulata (${clp(arrastre)}) es arrastre de 2025 — no cuenta como venta del año.</div>`:'');
-  $('gastosCard').innerHTML=
-    `<div class="gboxes">
-       <div class="gbox"><div class="l">Telas</div><div class="v">${clp(telas)}</div></div>
-       <div class="gbox"><div class="l">Impuestos</div><div class="v">${clp(imp)}</div></div>
-       <div class="gbox"><div class="l">Operación</div><div class="v">${clp(oper)}</div></div>
-     </div>`+
-    row('Total gastos 2026', clp(gastos), 'tot');
+  // SUELDO/CAJA — hoy, este mes, pagos
   const pagos=between('por pagar julio','proyeccion fin de mes');
-  const ppl=pagos.map(p=>`<div class="sub-lv"><span>${esc(p[0])}</span><b>${clp(toNum(p[1]))}</b></div>`).join('');
-  $('cajaCard').innerHTML=
-    `<div class="wf">
-      <div class="step"><span class="lab">Caja hoy (banco)</span><span class="amt">${clp(cajaHoy)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Por cobrar (La Mulata)</span><span class="amt pos">${clp(ctelas)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Por cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
-      <div class="step"><span class="lab"><span class="op minus">−</span>Por pagar julio</span><span class="amt neg">${clp(pagar)}</span></div>
-      ${ppl}
-      <div class="result"><span class="lab">Proyección fin de mes</span><span class="amt">${clp(proj)}</span></div>
-    </div>`;
-
-  // ---- Pestaña Caja ----
   $('cajaHoyBig').textContent=clp(cajaHoy);
   $('cajaMes').innerHTML=
     `<div class="wf">
@@ -498,21 +477,27 @@ function renderMeta(){
   const sueldo=getSueldo(), gastos=getGastosMes(), sale=sueldo+gastos, caja=CAJAPROJ, meses=mesesRestantes();
   const runway=sale>0?caja/sale:0, need=sale*meses, falta=Math.max(0,need-caja);
   const cover=meses>0?Math.min(1,runway/meses):0, ok=runway>=meses;
+  const nombres=['AGO','SEP','OCT','NOV','DIC'];
+  const blocks=nombres.slice(0,meses||5).map((mn,i)=>{
+    const fill = runway>=i+1?1 : runway>i?(runway-i) : 0;
+    const bg = fill>=1?'#5b8f68' : fill>0?`linear-gradient(90deg,#5b8f68 ${(fill*100).toFixed(0)}%,#efe7f8 ${(fill*100).toFixed(0)}%)` : '#efe7f8';
+    const col = fill>0?'#4a4a86':'#b9b6c6';
+    return `<div style="flex:1;text-align:center"><div style="height:40px;border-radius:9px;background:${bg};border:1px solid #e6e2f4"></div><div style="font-size:9px;font-weight:800;color:${col};margin-top:6px;letter-spacing:.08em">${mn}</div></div>`;
+  }).join('');
   $('metaLbl').textContent='Tu sueldo · desde agosto';
   $('metaBody').innerHTML=
-    row('Caja para partir (fin de julio)', clp(caja))+
-    '<div style="height:6px"></div>'+
+    `<div class="metapct" style="color:${ok?'var(--ok)':'var(--peri-ink)'};margin-bottom:2px">Te alcanza ~${runway.toFixed(1).replace('.',',')} meses</div>`+
+    `<div style="display:flex;gap:7px;margin:14px 0 6px">${blocks}</div>`+
+    `<div class="oneline" style="border-top:0;padding-top:2px;margin-top:4px">Cada bloque = un mes con tu sueldo pagado. Verde = cubierto con la caja de hoy${ok?'; te alcanza todo el tramo.':`; desde ahí necesitas <b>cobrar</b> ${clp(falta)}.`}</div>`+
+    `<div style="height:8px"></div>`+
+    row('Caja para partir', clp(caja))+
     row('Sueldo al mes', clp(sueldo))+
     row('Gastos aprox. al mes *', `<span id="editGastos" style="border-bottom:1px dashed var(--muted); cursor:pointer">${clp(gastos)}</span>`)+
     row('Sale cada mes', clp(sale), 'tot')+
-    `<div class="metapct" style="margin-top:12px; color:${ok?'var(--ok)':'var(--peri-ink)'}">Te alcanza ~${runway.toFixed(1).replace('.',',')} meses</div>`+
-    `<div class="bar"><i style="width:${(cover*100).toFixed(0)}%;background:${ok?'linear-gradient(90deg,#3f7a54,#8bc39a)':'linear-gradient(90deg,#6f6fc9,#a6a6e6)'}"></i></div>`+
-    `<div class="legend"><span>Cubres ~${Math.floor(runway)} de ${meses} meses</span><span>${ok?'Cubierto':'Después falta cobrar '+clp(falta)}</span></div>`+
-    `<div class="oneline">El sueldo sale de la <b>caja</b>, no de la ganancia. Con lo que tienes hoy cubres ~${Math.floor(runway)} meses; de ahí en adelante necesitas <b>cobrar</b> plata nueva para seguir pagándote. <br>* gasto mensual estimado — tócalo para ajustarlo a tu número real.</div>`;
+    `<div class="oneline">El sueldo sale de la <b>caja</b>, no de la ganancia. <br>* gasto mensual estimado — tócalo para ajustarlo a tu número real.</div>`;
   const eg=$('editGastos'); if(eg) eg.onclick=()=>{ const v=prompt('Tus gastos fijos comunes al mes (pesos):',getGastosMes()); if(v!==null){const n=toNum(v); if(n>=0){localStorage.setItem('coz_gastos_mes',n); renderMeta();}} };
 }
 $('editMeta').onclick=()=>{ const v=prompt('¿Cuánto quieres sacar de sueldo al mes? (pesos)',getSueldo()); if(v!==null){const n=toNum(v); if(n>0){localStorage.setItem('coz_sueldo',n); renderMeta();}} };
-$('showAll').onclick=()=>{ const d=$('detalle'), open=d.style.display==='none'; d.style.display=open?'block':'none'; $('showAll').textContent=open?'Ocultar los números ▴':'Ver todos los números ▾'; };
 
 /* ---------- PROYECTOS ---------- */
 let PROJ=[], projFilter='Todos';
