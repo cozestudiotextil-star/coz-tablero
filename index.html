@@ -1,0 +1,671 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>COZ · Tablero</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="COZ">
+<meta name="theme-color" content="#6f6fc9">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#ffffff; --panel:#faf9ff; --card:#ffffff; --ink:#23222c; --muted:#8b8896; --line:#e9e8f4;
+  --peri:#6f6fc9; --peri-soft:#edecfb; --peri-ink:#4a4a86;
+  --ok:#3f7a54; --okbg:#eaf3ec; --warn:#b57d1c; --warnbg:#fbf1dc; --bad:#bd4a34; --badbg:#fbeae6; --info:#5566b0; --infobg:#eceff9;
+  --shadow:0 1px 2px rgba(70,70,120,.05), 0 6px 22px rgba(70,70,120,.06);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg); color:var(--ink);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Georgia,serif; padding-bottom:70px;}
+.wrap{max-width:520px; margin:0 auto; padding:0 15px}
+header{position:sticky; top:0; z-index:20; background:rgba(255,255,255,.94);
+  backdrop-filter:saturate(180%) blur(10px); border-bottom:1px solid var(--line); padding:15px 0 11px;}
+header .wrap{display:flex; align-items:baseline; justify-content:space-between}
+.brand{font-weight:800; letter-spacing:.2em; font-size:14px}
+.brand small{color:var(--peri); font-weight:800}
+.sub{font-size:11px; color:var(--muted); margin-top:3px; letter-spacing:.04em}
+.updated{font-size:10px; color:var(--muted); text-align:right}
+h2{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--peri-ink);
+  background:var(--peri-soft); border-radius:8px; padding:7px 11px; margin:22px 0 11px; font-weight:800}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:15px; margin-bottom:12px}
+.view{display:none}
+.view.active{display:block; animation:fade .22s ease}
+@keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+
+.kpis{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px; box-shadow:var(--shadow)}
+.kpi .l{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700}
+.kpi .v{font-size:19px; font-weight:800; margin-top:6px; letter-spacing:-.01em}
+.kpi .n{font-size:10.5px; color:var(--muted); margin-top:3px}
+.kpi.wide{grid-column:1/3}
+.kpi.hero{grid-column:1/3; background:var(--peri-soft); border-color:#dcdcf6}
+.kpi.hero .v{font-size:27px; color:var(--peri-ink)}
+
+/* visual inicio */
+.metapct{font-size:28px; font-weight:800; color:var(--peri-ink); letter-spacing:-.01em; line-height:1.1; margin:4px 0}
+.showall{text-align:center; font-size:12px; font-weight:800; color:var(--peri); padding:10px; margin-bottom:4px; cursor:pointer}
+.donut-wrap{display:flex; align-items:center; gap:18px}
+.donut{width:130px; height:130px; flex:0 0 auto}
+.dleg{flex:1}
+.dleg .li{display:flex; align-items:center; gap:9px; padding:9px 0}
+.dleg .li:first-child{border-bottom:1px solid var(--line)}
+.dot2{width:13px; height:13px; border-radius:4px; flex:0 0 auto}
+.dleg .nm{font-size:13px; font-weight:800; line-height:1.15}
+.dleg .nm .sm{display:block; font-size:10.5px; color:var(--muted); font-weight:600}
+.dleg .am{margin-left:auto; font-weight:800; font-size:15px; color:var(--ink)}
+.oneline{font-size:12px; color:var(--muted); margin-top:12px; line-height:1.5; border-top:1px solid var(--line); padding-top:11px}
+.mesbars{margin:4px 0 2px}
+.mesrow{display:flex; align-items:center; gap:11px; margin:9px 0}
+.mesrow .ml{width:44px; font-size:11.5px; color:var(--muted); font-weight:700; flex:0 0 auto}
+.mestrack{flex:1; height:18px; background:var(--panel); border-radius:9px; overflow:hidden}
+.mestrack>i{display:block; height:100%; border-radius:9px; transition:width .5s}
+.mesrow .mv{width:58px; text-align:right; font-weight:800; font-size:12.5px; flex:0 0 auto}
+.reschip{display:flex; align-items:center; justify-content:space-between; background:var(--okbg); border-radius:14px; padding:14px 16px; margin-bottom:6px}
+.reschip.neg{background:var(--badbg)}
+.reschip .rl{font-size:12.5px; font-weight:800; color:var(--ok)} .reschip.neg .rl{color:var(--bad)}
+.reschip .rv{font-size:23px; font-weight:800; color:var(--ok)} .reschip.neg .rv{color:var(--bad)}
+
+/* rows label/value */
+.lv{display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--line); gap:10px}
+.lv:last-child{border-bottom:0}
+.lv .k{font-size:13px; color:var(--ink)}
+.lv .k small{display:block; color:var(--muted); font-size:11px; margin-top:1px}
+.lv .val{font-weight:800; font-size:15px; white-space:nowrap}
+.lv.tot{border-top:2px solid var(--peri-soft); margin-top:4px; padding-top:11px}
+.lv.tot .val{color:var(--peri-ink)}
+.sub-lv{padding:6px 0 6px 12px; font-size:12px; color:var(--muted); display:flex; justify-content:space-between}
+.sub-lv b{color:var(--ink); font-weight:700}
+.pos{color:var(--ok)} .neg{color:var(--bad)}
+.note{font-size:11.5px; color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:9px 11px; margin-top:10px; line-height:1.4}
+
+/* gastos boxes */
+.gboxes{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:4px}
+.gbox{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px; text-align:center}
+.gbox .l{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; font-weight:700}
+.gbox .v{font-size:14px; font-weight:800; margin-top:5px}
+
+/* waterfall caja */
+.wf{margin:2px 0}
+.wf .step{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line)}
+.wf .step .lab{font-size:13px; display:flex; align-items:center; gap:8px}
+.wf .op{width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; flex:0 0 auto}
+.op.plus{background:var(--okbg); color:var(--ok)} .op.minus{background:var(--badbg); color:var(--bad)} .op.eq{background:var(--peri-soft); color:var(--peri-ink)}
+.wf .amt{font-weight:800; font-size:14px}
+.wf .result{background:var(--peri-soft); border-radius:10px; padding:11px; margin-top:8px; display:flex; justify-content:space-between; align-items:center}
+.wf .result .lab{font-weight:800; color:var(--peri-ink); font-size:13px}
+.wf .result .amt{color:var(--peri-ink); font-size:18px}
+.expbtn{font-size:11px; color:var(--peri); font-weight:700; margin:8px 0 0; cursor:pointer}
+.pplist{display:none; margin-top:6px} .pplist.open{display:block}
+
+/* meta */
+.meta-top{display:flex; justify-content:space-between; align-items:center; gap:8px}
+.meta-top b{font-size:13px}
+.mini{font-size:11px; color:var(--peri); background:none; border:1px solid var(--line); border-radius:8px; padding:5px 9px; font-weight:700}
+.bar{height:12px; background:var(--peri-soft); border-radius:8px; overflow:hidden; margin-top:10px}
+.bar>i{display:block; height:100%; background:linear-gradient(90deg,var(--peri),#a6a6e6); border-radius:8px; transition:width .6s}
+.legend{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:7px}
+
+/* chips */
+.chips{display:flex; gap:7px; overflow-x:auto; padding:2px 0 9px; -webkit-overflow-scrolling:touch}
+.chip{white-space:nowrap; font-size:12px; font-weight:700; color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px 13px}
+.chip.on{color:#fff; background:var(--peri); border-color:var(--peri)}
+
+/* projects */
+.proj{border:1px solid var(--line); border-radius:14px; padding:13px; margin-bottom:10px; background:var(--card); box-shadow:var(--shadow)}
+.proj .h{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+.proj .cli{font-weight:800; font-size:14px}
+.proj .srv{font-size:11.5px; color:var(--muted); margin-top:2px}
+.pill{font-size:10px; font-weight:800; padding:3px 9px; border-radius:999px; white-space:nowrap}
+.p-pagado{background:var(--okbg); color:var(--ok)}
+.p-abono{background:var(--warnbg); color:var(--warn)}
+.p-prod{background:var(--infobg); color:var(--info)}
+.p-prospecto{background:var(--peri-soft); color:var(--peri-ink)}
+.proj .nums{display:flex; gap:16px; margin-top:10px; flex-wrap:wrap}
+.proj .nums div{font-size:11px; color:var(--muted)}
+.proj .nums b{display:block; font-size:13px; color:var(--ink); font-weight:800}
+.alert{margin-top:10px; font-size:11.5px; color:#8a5a1c; background:var(--warnbg); border:1px solid #f0e2c6; border-radius:9px; padding:8px 10px}
+.grp{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--peri-ink); font-weight:800; margin:18px 4px 9px}
+.prow{display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:12.5px; border-bottom:1px solid var(--line)}
+.prow:last-of-type{border-bottom:0}
+.prow .pk{color:var(--muted); flex:0 0 auto} .prow .pv{font-weight:700; text-align:right}
+.falta{margin-top:10px; font-size:11.5px; color:var(--bad); line-height:1.42}
+.falta b{color:var(--bad); font-weight:800}
+.p-proceso{background:var(--warnbg); color:var(--warn)}
+
+/* todo */
+.todo{border:1px solid var(--line); border-left:3px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:9px; background:var(--card); box-shadow:var(--shadow)}
+.todo.p1{border-left-color:var(--bad)} .todo.p2{border-left-color:var(--warn)}
+.todo.p3{border-left-color:var(--info)} .todo.p4{border-left-color:var(--line)}
+.todo .txt{font-size:13px; font-weight:700; line-height:1.35}
+.tag{font-size:9.5px; font-weight:800; letter-spacing:.05em; color:var(--peri); margin-right:5px}
+.badges{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; align-items:center}
+.b{font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; background:var(--panel); color:var(--muted)}
+.b.due{background:var(--badbg); color:var(--bad)} .b.today{background:var(--warnbg); color:var(--warn)}
+.b.pri1{background:var(--badbg);color:var(--bad)} .b.pri2{background:var(--warnbg);color:var(--warn)} .b.pri3{background:var(--infobg);color:var(--info)}
+.todo .desc{font-size:11.5px; color:var(--muted); margin-top:9px; white-space:pre-wrap; display:none; border-top:1px dashed var(--line); padding-top:9px}
+.todo.open .desc{display:block}
+.exp{font-size:10.5px; color:var(--peri); margin-top:7px; font-weight:700}
+
+/* agenda */
+.ev{display:flex; gap:13px; padding:11px 0; border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev .d{flex:0 0 44px; text-align:center}
+.ev .d .day{font-size:19px; font-weight:800; line-height:1; color:var(--peri-ink)}
+.ev .d .mo{font-size:10px; color:var(--muted); text-transform:uppercase}
+.ev .b2 .s{font-weight:700; font-size:13px}
+.ev .b2 .t{font-size:11.5px; color:var(--muted); margin-top:2px}
+
+/* posts */
+.post{display:flex; align-items:center; justify-content:space-between; padding:12px 4px; border-bottom:1px solid var(--line)}
+.post:last-child{border-bottom:0}
+.post .n{font-weight:700; font-size:13.5px}
+.tgl{width:52px; height:30px; border-radius:999px; background:#e2e0f2; position:relative; transition:.2s; flex:0 0 auto}
+.tgl.on{background:var(--peri)}
+.tgl i{position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl.on i{left:25px}
+
+/* nav (text, editorial) */
+nav{position:fixed; left:0; right:0; bottom:0; z-index:30; background:rgba(255,255,255,.96);
+  backdrop-filter:blur(10px); border-top:1px solid var(--line); display:flex; padding:8px 4px; padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+nav button{flex:1; background:none; border:0; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:0; padding:6px 1px; position:relative}
+nav button.on{color:var(--peri)}
+nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%); width:20px; height:2px; border-radius:2px; background:var(--peri)}
+.dot{display:inline-block; min-width:16px; height:16px; line-height:16px; font-size:9px; border-radius:999px; background:var(--bad); color:#fff; font-weight:800; margin-left:3px; padding:0 3px}
+.state{font-size:12px; color:var(--muted); padding:16px; text-align:center}
+.err{color:var(--bad)}
+.tiny{font-size:10.5px; color:var(--muted); margin:2px 2px 0}
+</style>
+
+<header>
+  <div class="wrap">
+    <div>
+      <div class="brand">COZ <small>/</small> ESTUDIO TEXTIL</div>
+      <div class="sub">Tablero del negocio · lee del maestro</div>
+    </div>
+    <div class="updated" id="updated"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- INICIO -->
+  <section id="v-inicio" class="view active">
+    <h2>Cómo va el negocio</h2>
+    <div class="card" id="ganCard"><div class="state">Cargando…</div></div>
+
+    <h2>Tu sueldo</h2>
+    <div class="card" id="metaCard">
+      <div class="meta-top"><b id="metaLbl">Tu sueldo</b><button class="mini" id="editMeta">Editar</button></div>
+      <div id="metaBody"></div>
+    </div>
+
+    <h2>Este mes · julio</h2>
+    <div class="card" id="mesCard"><div class="state">Cargando…</div></div>
+
+    <div class="showall" id="showAll">Ver todos los números ▾</div>
+    <div id="detalle" style="display:none">
+      <h2>Resultado del año</h2>
+      <div class="card" id="anioCard"></div>
+      <h2>Gastos 2026</h2>
+      <div class="card" id="gastosCard"></div>
+      <h2>Caja del mes · detalle</h2>
+      <div class="card" id="cajaCard"></div>
+      <p class="tiny">Fuente: hoja <b>COZ_Gastos_y_Ventas</b> · pestaña LECTURA. El IVA es pass-through: no afecta la utilidad real.</p>
+    </div>
+  </section>
+
+  <!-- CAJA -->
+  <section id="v-caja" class="view">
+    <h2>Lo que tengo hoy</h2>
+    <div class="card"><div class="reschip"><span class="rl">En el banco</span><span class="rv" id="cajaHoyBig">—</span></div>
+      <div class="oneline">Plata disponible en la cuenta ahora mismo.</div></div>
+    <h2>Este mes · julio</h2>
+    <div class="card" id="cajaMes"><div class="state">Cargando…</div></div>
+    <h2>Hay que pagar</h2>
+    <div class="card" id="cajaPagos"><div class="state">Cargando…</div></div>
+    <p class="tiny">Sale de la sección "Julio · caja del mes" de tu hoja. Cuando agregues los pagos del próximo mes ahí, aparecen aquí.</p>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="v-proyectos" class="view">
+    <h2>Resumen de proyectos</h2>
+    <p class="tiny" style="margin-bottom:6px">Por cobrar = Total c/IVA − abono. La factura se emite después de que el cliente paga; a Consuelo se le paga solo cuando emite boleta.</p>
+    <div class="chips" id="projChips"></div>
+    <div id="projList"><div class="state">Cargando proyectos…</div></div>
+    <p class="tiny">Detalle por cliente desde la hoja de Cotizaciones. La Mulata en detalle e importaciones viven en pestañas del maestro que la app aún no puede leer en vivo.</p>
+  </section>
+
+  <!-- PENDIENTES -->
+  <section id="v-pendientes" class="view">
+    <h2>Pendientes <span id="penCount" class="tiny"></span></h2>
+    <div class="chips" id="penChips"></div>
+    <div id="penList"><div class="state">Cargando pendientes…</div></div>
+    <h2>Alertas del sheet</h2>
+    <div id="alertList"><div class="state">…</div></div>
+  </section>
+
+  <!-- AGENDA -->
+  <section id="v-agenda" class="view">
+    <h2>Próximos 7 días</h2>
+    <div class="card" id="agendaCard"><div class="state">Cargando agenda…</div></div>
+    <h2>Importaciones · proveedor AG Design</h2>
+    <div class="card" id="dinCard"><div class="state">Cargando…</div></div>
+  </section>
+
+  <!-- POSTS -->
+  <section id="v-posts" class="view">
+    <h2>Posts de esta semana</h2>
+    <div class="card">
+      <div class="tiny" id="weekLbl" style="margin-bottom:8px"></div>
+      <div id="posts"></div>
+    </div>
+    <p class="tiny">Marca lo que ya publicaste. Se reinicia solo cada lunes.</p>
+  </section>
+</main>
+
+<nav>
+  <button data-v="inicio" class="on">Inicio</button>
+  <button data-v="caja">Caja</button>
+  <button data-v="proyectos">Proyectos</button>
+  <button data-v="pendientes">Pendientes<span class="dot" id="navDot" style="display:none">0</span></button>
+  <button data-v="agenda">Agenda</button>
+  <button data-v="posts">Posts</button>
+</nav>
+
+<script>
+const F_MAIN="11dVF6No7E-r0tLchmADGsWg-0VvbHvKpzVMmhV8huZ8";
+const F_COT="1caDM9Pyd5-wkkeRSJd-XDEoYWEpE1C7gjCjaeZxmKAA";
+const F_DIN="1VKH95x0hNM6RjuKK-eU4L3tOlij-VOlR-BVcqVH5-4Y";
+const COZ_PROJ="6gmqpM25vm5JpXwJ";
+const T_DRIVE="mcp__272cdf6e-d2ce-40f5-a345-5a44c714ba54__read_file_content";
+const T_CAL="mcp__62296dc6-cfe8-4832-afe2-c03efbf3b4f2__list_events";
+const T_TODO="mcp__4209a9dd-0877-4cae-8998-197da33d196a__find-tasks";
+
+const clp=n=>isFinite(n)?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';
+function clpShort(n){ if(!isFinite(n))return'—'; const a=Math.abs(n), s=n<0?'-':'';
+  if(a>=1e6) return s+'$'+(a/1e6).toLocaleString('es-CL',{maximumFractionDigits:1})+'M';
+  if(a>=1000) return s+'$'+Math.round(a/1000)+' mil';
+  return s+'$'+Math.round(a); }
+function donut(fr){ const r=52, C=2*Math.PI*r, seg=Math.max(0,Math.min(1,fr))*C;
+  return `<svg class="donut" viewBox="0 0 132 132" aria-hidden="true">
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="#dcdcf6" stroke-width="17"/>
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="#5b5bb8" stroke-width="17" stroke-linecap="round"
+      stroke-dasharray="${seg.toFixed(1)} ${(C-seg).toFixed(1)}" transform="rotate(-90 66 66)"/>
+  </svg>`; }
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const toNum=s=>{const neg=/^\s*[-(]/.test(s||'');const m=(s||'').replace(/[^\d]/g,'');const v=m?parseInt(m,10):0;return neg?-v:v;};
+const $=id=>document.getElementById(id);
+
+/* ==== DATOS EMBEBIDOS (foto del 5 jul 2026) ==== */
+const FIX_MAIN=`
+| COZ — LECTURA |  |
+| RESULTADO 2026 · PAGADO |  |
+| VENTAS 2026 pagadas (neto) | $4.706.636 |
+| N ventas pagadas | 3 |
+| Utilidad Coco (pagadas) | $1.727.013 |
+| Facturado 2026 de arrastre 2025 (N70 La Mulata) - no cuenta como venta del ano | $9.238.689 |
+| POR COBRAR + PIPELINE |  |
+| POR COBRAR (saldos confirmados) | $3.833.699 |
+| Abonos recibidos | $8.830.358 |
+| PIPELINE prospectos (neto) | $15.634.454 |
+| En produccion / abono (neto) | $9.482.100 |
+| GASTOS |  |
+| Gastos 2026 (neto) | $9.933.445 |
+| Costo de telas | $3.151.394 |
+| Impuestos (IVA + Renta) | $2.893.518 |
+| Operación | $3.888.533 |
+| Gastos por subir SII (conteo) | 31 |
+| Utilidad por realizar (deals en curso) | $4.537.664 |
+| JULIO · CAJA DEL MES |  |
+| Caja hoy (banco CLP) | $4.496.302 |
+| Por cobrar telas (La Mulata) | $3.176.999 |
+| Por cobrar Lanima (contra entrega) | $333.100 |
+| Por pagar julio | $4.456.858 |
+| IVA junio (F-29, estimado) | $900.000 |
+| Beztas 50% FOB (telas) | $1.560.694 |
+| Flete REM (retiro ~10 jul) | $1.240.701 |
+| Contador (15 jul, aprox) | $45.000 |
+| Publicidad Meta/Facebook (aprox) | $200.000 |
+| Consuelo (cierre Lanima) | $245.000 |
+| Tarjeta de credito | $265.463 |
+| Proyeccion fin de mes | $3.549.543 |`;
+const FIX_COT=`
+| ID | Cliente | Servicio | Estado pipeline | Cuenta en 2026 | Monto neto | IVA 19% | Total c/IVA | N factura | Abono recibido | Saldo por cobrar | Honorario Consuelo (bruto / liq) | Boleta Consuelo N | Consuelo pagada | Utilidad Coco | ALERTA / a confirmar |
+| COT-001 | Minisima | Diseno estampado | Pagado | No (arrastrado 2025) | 1078750 | 204963 | 1283713 | Orazem F°74 |  |  | revisar posible BHE 68 | 68? | revisar | 431500 | Confirmar honorario Consuelo |
+| COT-002 | Brick London | Diseno estampado (Proyecto A) | Pagado | Si | 1137500 | 216125 | 1353625 | F°71 + F°72 | abono+saldo | pagado | 641522 / 543690 | 61 | Si | 495978 | Corregir folio N factura |
+| COT-003 | La Mulata | Importacion telas | Pagado | Si | 3483800 | 661922 | 4145722 | Un Toque F°77 | 1380358 | 0 (pagado) | n/a (telas) |  | n/a | 1145699 | OK |
+| COT-004 | Outlet / venta inmediata | Importacion telas (stock viejo) | Pagado | Si | 85336 | 16214 | 101550 | Boleta 51 |  | 0 (pagado) | n/a |  | n/a | 85336 | OK |
+| COT-005 | Gonzalo Heresi / Sienna | Diseno estampado | Abono hecho | Si | 440000 | 83600 | 523600 | FALTA factura saldo | 200000 | 323600 | 0 (Coco, sin costo) | - | n/a | 440000 | Entregado: falta cobrar saldo + emitir factura |
+| COT-007 | La Mulata | Importacion telas (jun-2026) | En produccion | Si | 8552100 | 1624899 | 10176999 | F°78 (solo abono) | 7000000 | 3176999 | n/a (telas) |  | n/a | 3852664 | Falta factura del saldo 30% al entregar; decidir flete Turquia-Chile |
+| COT-009 | Brick London | Diseno estampado (Proyecto C) | Pagado | No (arrastrado 2025) | 260800 | 49552 | 310352 | F°76 |  |  | 123091 / 104320 | 67 | Si | 156480 | Falta 1 estampado por enviar |
+| COT-006 | Victoria Pey | Importacion telas (sedas) | Prospecto | No (hasta pagar) | 6134454 | 1165546 | 7300000 | - |  | 7300000 | n/a |  | n/a | 2888000 | Emitir boleta $240.000 del abono; decidir pedido grande |
+| COT-010 | Roca and Co | Diseno + telas | Prospecto | No | 9500000 | 1805000 | 11305000 | - |  |  | s/d |  |  |  | Prospecto no cerrado |
+| COT-011 | Lanima | Diseno estampado | Abono hecho | Si | 490000 | 93100 | 583100 | FALTA factura | 250000 | 333100 | 245000 neto / 290035 bruto | s/n | revisar | 245000 | Falta cobrar saldo + factura |`;
+const FIX_DIN=`
+| N Doc | Tipo | Fecha | Importador | Mercancia | Cod Arancel | Valor CIF USD | Monto CLP | AWB / Ref | Pedido / Cliente | En Drive | Notas |
+| 801843421-1 | DIN FedEx | 2026-06-19 | AG Design SPA | Muestras seda mulberry | s/d | s/d |  |  | Victoria Pey COT-006 | Si | Ya corregido con proveedor |
+| 239040058 | DIN / NPG | 2026-05 | AG Design SPA | Importacion tela | s/d | s/d |  | NPG 7213240915 | La Mulata N77 | Si | Ultimo envio |
+| 1734831626 | DIN / ENT | 2026-05 | AG Design SPA | Entrega Beztas | s/d | s/d |  |  | La Mulata N77 | Si | Confirmar detalle |
+| 239017426 | DIN | 2026-04 | AG Design SPA | Importacion + muestras | s/d | s/d |  | AWB 4309963641 | La Mulata N77 | Si |  |
+| DINC-2580960 | Cargo DHL | 2026-03-20 | AG Design SPA | Derechos aduana + IVA | - | - | 18.609 | AWB 3434315080 | La Mulata N77 | Si | Pago DHL import marzo |
+| 237983161 | DIN | 2026-03 | AG Design SPA | Importacion tela | s/d | s/d |  | AWB 3434315080 | La Mulata N77 | Si |  |`;
+const FIX_TASKS=[
+ {content:"[COCÓ] Victoria Pey (COT-006): emitir boleta $240.000 + decidir pedido sedas",priority:"p1",dueDate:"2026-07-03",checked:false,description:"Abono $240.000 recibido 29-jun. Muestras de seda llegaron. Emitir boleta (atrasada); decidir pedido grande ($7.300.000) y aclarar doble IVA con el contador."},
+ {content:"[COCÓ] Cambio de contador: Alejandro Marianjel (traspaso desde Pablo Arcos)",priority:"p1",dueDate:"2026-06-25",checked:false,description:"Enviar balance 8 columnas + libro mayor a Alejandro; coordinar arranque; avisar a las propuestas descartadas."},
+ {content:"[COCÓ] Regularizar patente comercial AG Design",priority:"p1",dueDate:"2026-06-19",checked:false,description:"Patentes provisorias caducaron 2023. Decidir cambio de domicilio SII (Vitacura). Hablar con el contador y armar el pack de documentos."},
+ {content:"[COCÓ] Cerrar empresa VEXA con contador",priority:"p1",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] La Mulata (COT-007): flete, prints, comprobantes y saldo",priority:"p2",dueDate:"2026-06-25",checked:false,description:"En producción. Abono 70% recibido; saldo $3.176.999. Decidir flete Turquía-Chile, confirmar fecha con Bilge, cobrar al entregar."},
+ {content:"[COCÓ] Sienna — seguimiento estampador (Gonzalo)",priority:"p2",dueDate:"2026-06-25",checked:false,description:"Diseños enviados al estampador. Esperando aprobación; hacer follow-up."},
+ {content:"[COCÓ] L'anima (COT-011): reunión diseño y cobrar saldo $333.100",priority:"p2",dueDate:"2026-07-03",checked:false,description:"Abono $250.000 recibido. Avanzar prints tras la reunión, entregar y cobrar saldo."},
+ {content:"[RUTINA] Revisar gastos marcados REVISAR + comprobante Dropbox",priority:"p3",dueDate:"2026-06-23",checked:false,description:""},
+ {content:"[COCÓ] Lead pañuelos seda: cotizar 12 pañuelos estampados",priority:"p3",dueDate:"",checked:false,description:""},
+ {content:"[RUTINA] Registrar 2 facturas (Global 81 + Acepta.com)",priority:"p3",dueDate:"2026-06-30",checked:false,description:""},
+ {content:"[COCÓ] Brick London — estampado (Consuelo)",priority:"p3",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Actualizar portafolio coz",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Buscar cursos de print online",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Actualizar web con nuevo inicio",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Planificar expansión ads (papel mural, papelería)",priority:"p4",dueDate:"2026-07-26",checked:false,description:""}
+];
+const FIX_EVENTS=[
+ {summary:"Café con la Isi lama",status:"confirmed",start:{dateTime:"2026-07-07T16:30:00-04:00"}},
+ {summary:"Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-08T10:00:00-04:00"}},
+ {summary:"Baby shower vale y pil",status:"confirmed",start:{dateTime:"2026-07-11T12:00:00-04:00"}}
+];
+async function call(name,args){
+  if(name===T_DRIVE){ const f=args&&args.fileId;
+    if(f===F_MAIN) return {fileContent:FIX_MAIN};
+    if(f===F_COT) return {fileContent:FIX_COT};
+    if(f===F_DIN) return {fileContent:FIX_DIN}; }
+  if(name===T_TODO) return {tasks:FIX_TASKS};
+  if(name===T_CAL) return {events:FIX_EVENTS};
+  return {__err:'sin datos'};
+}
+function parseTable(md){
+  if(!md) return [];
+  return md.split('\n').filter(l=>l.trim().startsWith('|'))
+    .map(l=>l.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(c=>c.replace(/\\/g,'').trim()))
+    .filter(r=>!r.every(c=>c===''||/^:?-+:?$/.test(c)));
+}
+
+/* ---------- INICIO (LECTURA) ---------- */
+let VENTAS=0, UTIL=0, UTILREAL=0, CAJAPROJ=0;
+async function loadInicio(){
+  const d=await call(T_DRIVE,{fileId:F_MAIN});
+  const md=d.fileContent||d.text;
+  if(d.__err||!md){ $('ganCard').innerHTML='<div class="state err">No pude leer el maestro. Toca Recargar arriba.</div>'; return; }
+  const rows=parseTable(md);
+  const L=rows.filter(r=>r[0]).map(r=>[r[0], r[1]!==undefined?r[1]:'']);
+  const map={}; L.forEach(r=>{ if(r[1]!=='') map[r[0].toLowerCase()]=r[1]; });
+  const g=frag=>{const k=Object.keys(map).find(k=>k.includes(frag)); return k?map[k]:'';};
+  const idxOf=frag=>L.findIndex(r=>r[0].toLowerCase().includes(frag));
+  const between=(a,b)=>{const i=idxOf(a),j=idxOf(b); if(i<0)return[]; const end=j<0?L.length:j; return L.slice(i+1,end).filter(r=>r[1]!=='');};
+
+  const ventas=toNum(g('ventas 2026 pagadas')), nv=g('n ventas')||'0', util=toNum(g('utilidad coco')),
+        arrastre=toNum(g('arrastre 2025')), cobrar=toNum(g('por cobrar (saldos')), abonos=toNum(g('abonos recibidos')),
+        pipe=toNum(g('pipeline prospectos')), prod=toNum(g('en produccion / abono')), gastos=toNum(g('gastos 2026 (neto)')),
+        sii=g('subir sii')||'0', proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
+  const telas=toNum(g('costo de telas')), imp=toNum(g('impuestos (iva')), oper=toNum(g('operaci'));
+  const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar julio'));
+  VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
+  const margen=ventas>0?(util/ventas*100):0;
+
+  // Cómo va el negocio — dona: ya ganado vs por venir
+  const totalU=util+utilReal, frG=totalU>0?util/totalU:0;
+  $('ganCard').innerHTML=
+    `<div class="donut-wrap">${donut(frG)}
+      <div class="dleg">
+        <div class="li"><span class="dot2" style="background:#5b5bb8"></span><span class="nm">Ya ganado<span class="sm">en el bolsillo</span></span><span class="am">${clpShort(util)}</span></div>
+        <div class="li"><span class="dot2" style="background:#dcdcf6"></span><span class="nm">Por venir<span class="sm">proyectos en curso</span></span><span class="am">${clpShort(utilReal)}</span></div>
+      </div>
+    </div>
+    <div class="oneline">Cuando cierras y te pagan un proyecto, su parte <b>por venir</b> pasa a <b>ya ganado</b>.</div>`;
+
+  renderMeta();
+
+  // Este mes — entra / sale / queda
+  const entra=cajaHoy+ctelas+clanima, sale=pagar, mx=Math.max(entra,sale,1);
+  $('mesCard').innerHTML=
+    `<div class="reschip ${proj<0?'neg':''}"><span class="rl">Te queda a fin de mes</span><span class="rv">${clpShort(proj)}</span></div>
+     <div class="mesbars">
+       <div class="mesrow"><span class="ml">Entra</span><div class="mestrack"><i style="width:${(entra/mx*100).toFixed(0)}%;background:var(--ok)"></i></div><span class="mv">${clpShort(entra)}</span></div>
+       <div class="mesrow"><span class="ml">Sale</span><div class="mestrack"><i style="width:${(sale/mx*100).toFixed(0)}%;background:var(--bad)"></i></div><span class="mv">${clpShort(sale)}</span></div>
+     </div>
+     <div class="oneline">Lo que tienes en el banco, más lo que te van a pagar, menos lo que debes pagar este mes.</div>`;
+
+  // ---- Detalle (oculto por defecto) ----
+  $('anioCard').innerHTML=
+    row('Ventas pagadas (neto)', clp(ventas))+
+    row('N.º de ventas', nv)+
+    row('Utilidad ya ganada', clp(util))+
+    row('Margen sobre ventas', margen.toFixed(1)+'%')+
+    row('Utilidad por venir', clp(utilReal))+
+    (arrastre? `<div class="note"><b>Nota:</b> el N°70 de La Mulata (${clp(arrastre)}) es arrastre de 2025 — no cuenta como venta del año.</div>`:'');
+  $('gastosCard').innerHTML=
+    `<div class="gboxes">
+       <div class="gbox"><div class="l">Telas</div><div class="v">${clp(telas)}</div></div>
+       <div class="gbox"><div class="l">Impuestos</div><div class="v">${clp(imp)}</div></div>
+       <div class="gbox"><div class="l">Operación</div><div class="v">${clp(oper)}</div></div>
+     </div>`+
+    row('Total gastos 2026', clp(gastos), 'tot');
+  const pagos=between('por pagar julio','proyeccion fin de mes');
+  const ppl=pagos.map(p=>`<div class="sub-lv"><span>${esc(p[0])}</span><b>${clp(toNum(p[1]))}</b></div>`).join('');
+  $('cajaCard').innerHTML=
+    `<div class="wf">
+      <div class="step"><span class="lab">Caja hoy (banco)</span><span class="amt">${clp(cajaHoy)}</span></div>
+      <div class="step"><span class="lab"><span class="op plus">+</span>Por cobrar (La Mulata)</span><span class="amt pos">${clp(ctelas)}</span></div>
+      <div class="step"><span class="lab"><span class="op plus">+</span>Por cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
+      <div class="step"><span class="lab"><span class="op minus">−</span>Por pagar julio</span><span class="amt neg">${clp(pagar)}</span></div>
+      ${ppl}
+      <div class="result"><span class="lab">Proyección fin de mes</span><span class="amt">${clp(proj)}</span></div>
+    </div>`;
+
+  // ---- Pestaña Caja ----
+  $('cajaHoyBig').textContent=clp(cajaHoy);
+  $('cajaMes').innerHTML=
+    `<div class="wf">
+      <div class="step"><span class="lab">En el banco hoy</span><span class="amt">${clp(cajaHoy)}</span></div>
+      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar La Mulata</span><span class="amt pos">${clp(ctelas)}</span></div>
+      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
+      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de julio</span><span class="amt neg">${clp(pagar)}</span></div>
+      <div class="result"><span class="lab">Quedas a fin de mes</span><span class="amt">${clp(proj)}</span></div>
+    </div>`;
+  const pagosSorted=pagos.map(p=>[p[0],toNum(p[1])]).sort((a,b)=>b[1]-a[1]);
+  $('cajaPagos').innerHTML=
+    pagosSorted.map(p=>`<div class="lv"><span class="k">${esc(p[0])}</span><span class="val neg">${clp(p[1])}</span></div>`).join('')+
+    `<div class="lv tot"><span class="k">Total a pagar</span><span class="val">${clp(pagar)}</span></div>`;
+}
+function row(k,v,cls){ return `<div class="lv ${cls==='tot'?'tot':''}"><span class="k">${esc(k)}</span><span class="val">${v}</span></div>`; }
+
+function getSueldo(){ return parseInt(localStorage.getItem('coz_sueldo')||'1000000',10); }
+function getGastosMes(){ return parseInt(localStorage.getItem('coz_gastos_mes')||'560000',10); }
+function mesesRestantes(){ const m=new Date().getMonth(); return Math.max(0, 12-Math.max(m,7)); } // agosto=7 → ago–dic
+function renderMeta(){
+  const sueldo=getSueldo(), gastos=getGastosMes(), sale=sueldo+gastos, caja=CAJAPROJ, meses=mesesRestantes();
+  const runway=sale>0?caja/sale:0, need=sale*meses, falta=Math.max(0,need-caja);
+  const cover=meses>0?Math.min(1,runway/meses):0, ok=runway>=meses;
+  $('metaLbl').textContent='Tu sueldo · desde agosto';
+  $('metaBody').innerHTML=
+    row('Caja para partir (fin de julio)', clp(caja))+
+    '<div style="height:6px"></div>'+
+    row('Sueldo al mes', clp(sueldo))+
+    row('Gastos aprox. al mes *', `<span id="editGastos" style="border-bottom:1px dashed var(--muted); cursor:pointer">${clp(gastos)}</span>`)+
+    row('Sale cada mes', clp(sale), 'tot')+
+    `<div class="metapct" style="margin-top:12px; color:${ok?'var(--ok)':'var(--peri-ink)'}">Te alcanza ~${runway.toFixed(1).replace('.',',')} meses</div>`+
+    `<div class="bar"><i style="width:${(cover*100).toFixed(0)}%;background:${ok?'linear-gradient(90deg,#3f7a54,#8bc39a)':'linear-gradient(90deg,#6f6fc9,#a6a6e6)'}"></i></div>`+
+    `<div class="legend"><span>Cubres ~${Math.floor(runway)} de ${meses} meses</span><span>${ok?'Cubierto':'Después falta cobrar '+clp(falta)}</span></div>`+
+    `<div class="oneline">El sueldo sale de la <b>caja</b>, no de la ganancia. Con lo que tienes hoy cubres ~${Math.floor(runway)} meses; de ahí en adelante necesitas <b>cobrar</b> plata nueva para seguir pagándote. <br>* gasto mensual estimado — tócalo para ajustarlo a tu número real.</div>`;
+  const eg=$('editGastos'); if(eg) eg.onclick=()=>{ const v=prompt('Tus gastos fijos comunes al mes (pesos):',getGastosMes()); if(v!==null){const n=toNum(v); if(n>=0){localStorage.setItem('coz_gastos_mes',n); renderMeta();}} };
+}
+$('editMeta').onclick=()=>{ const v=prompt('¿Cuánto quieres sacar de sueldo al mes? (pesos)',getSueldo()); if(v!==null){const n=toNum(v); if(n>0){localStorage.setItem('coz_sueldo',n); renderMeta();}} };
+$('showAll').onclick=()=>{ const d=$('detalle'), open=d.style.display==='none'; d.style.display=open?'block':'none'; $('showAll').textContent=open?'Ocultar los números ▴':'Ver todos los números ▾'; };
+
+/* ---------- PROYECTOS ---------- */
+let PROJ=[], projFilter='Todos';
+function estadoInfo(est,srv){
+  const e=(est||'').toLowerCase(), s=(srv||'').toLowerCase();
+  const group=(e.includes('prospecto')||e.includes('no cerrado')||e===''||e==='-') ? 'Prospectos'
+    : (s.includes('importacion')||s.includes('tela')) ? 'Telas' : 'Diseño';
+  let cls,lbl;
+  if(e.includes('pagado')){cls='p-pagado';lbl='Pagado';}
+  else if(e.includes('produccion')){cls='p-prod';lbl='En producción';}
+  else if(e.includes('abono')){cls='p-proceso';lbl='En proceso';}
+  else if(e.includes('prospecto')){cls='p-prospecto';lbl='Prospecto';}
+  else {cls='p-prospecto';lbl=est||'No cerrado';}
+  return {cls,lbl,group};
+}
+async function loadProyectos(){
+  const d=await call(T_DRIVE,{fileId:F_COT});
+  const md=d.fileContent||d.text;
+  if(d.__err||!md){ $('projList').innerHTML='<div class="state err">No pude leer la hoja de cotizaciones.</div>'; return; }
+  const rows=parseTable(md); if(!rows.length){$('projList').innerHTML='<div class="state">Sin datos.</div>';return;}
+  const head=rows[0].map(h=>h.toLowerCase()); const col=f=>head.findIndex(h=>h.includes(f));
+  const ci={id:col('id'),cli:col('cliente'),srv:col('servicio'),est:col('estado'),neto:col('monto neto'),
+    total:col('total c/iva'),factura:col('n factura'),abono:col('abono'),saldo:col('saldo'),
+    hon:col('honorario consuelo'),conpag:col('consuelo pagada'),util:col('utilidad'),alerta:col('alerta')};
+  PROJ=rows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin cot/i.test(r[ci.cli])).map(r=>{
+    const fac=(r[ci.factura]||'').trim(), abono=toNum(r[ci.abono]);
+    const facturado=(!fac||fac==='-'||/falta/i.test(fac)) ? ('No'+(abono>0?` · abono ${clp(abono)}`:'')) : ('Sí · '+fac);
+    let hon=(r[ci.hon]||'').trim(), consuelo='';
+    if(/n\/a/i.test(hon)) consuelo='No participa';
+    else if(hon && !/sin costo/i.test(hon) && hon!=='0'){ consuelo=hon; const pg=(r[ci.conpag]||'').trim(); if(pg&&pg!=='-'&&!/^revisar$/i.test(pg)) consuelo+=' · '+pg; }
+    return {id:r[ci.id]||'', cli:r[ci.cli]||'', srv:r[ci.srv]||'', est:r[ci.est]||'',
+      neto:toNum(r[ci.neto]), total:toNum(r[ci.total]), saldo:toNum(r[ci.saldo]), util:toNum(r[ci.util]),
+      facturado, consuelo, alerta:(r[ci.alerta]||'').replace(/^OK$/i,'')};
+  });
+  const cats=['Todos','Diseño','Telas','Prospectos'];
+  $('projChips').innerHTML=cats.map(e=>`<button class="chip ${e===projFilter?'on':''}" data-f="${e}">${e}</button>`).join('');
+  $('projChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{projFilter=c.dataset.f;renderProj();});
+  renderProj();
+}
+function prow(k,v){return `<div class="prow"><span class="pk">${k}</span><span class="pv">${v}</span></div>`;}
+function projCard(p){
+  const info=estadoInfo(p.est,p.srv), rows=[];
+  rows.push(prow('Total c/IVA', p.total>0?clp(p.total):(p.neto>0?clp(p.neto)+' <span class="pk">(neto)</span>':'—')));
+  rows.push(prow('Facturado', esc(p.facturado)));
+  rows.push(prow('Por cobrar', p.saldo>0?`<span class="neg">${clp(p.saldo)}</span>`:'<span class="pos">Pagado</span>'));
+  if(p.consuelo) rows.push(prow('Consuelo', esc(p.consuelo)));
+  rows.push(prow('Utilidad Coz', p.util>0?`<span class="pos">${clp(p.util)}</span>`:'Por definir'));
+  const falta=p.alerta&&!/^n\/a/i.test(p.alerta)?`<div class="falta"><b>Falta:</b> ${esc(p.alerta)}</div>`:'';
+  return `<div class="proj"><div class="h"><div><div class="cli">${esc(p.cli)}</div><div class="srv">${p.id?esc(p.id)+' · ':''}${esc(p.srv)}</div></div><span class="pill ${info.cls}">${info.lbl}</span></div><div style="margin-top:9px">${rows.join('')}</div>${falta}</div>`;
+}
+function renderProj(){
+  const groups=['Diseño','Telas','Prospectos'];
+  const ord={'En producción':0,'En proceso':1,'Prospecto':2,'No cerrado':2,'Pagado':3};
+  let html='';
+  groups.forEach(g=>{
+    if(projFilter!=='Todos'&&projFilter!==g) return;
+    const list=PROJ.filter(p=>estadoInfo(p.est,p.srv).group===g)
+      .sort((a,b)=>(ord[estadoInfo(a.est,a.srv).lbl]??9)-(ord[estadoInfo(b.est,b.srv).lbl]??9)||b.neto-a.neto);
+    if(!list.length) return;
+    html+=`<div class="grp">${g==='Prospectos'?'Prospectos / no cerrados':g}</div>`+list.map(projCard).join('');
+  });
+  $('projList').innerHTML=html||'<div class="state">Nada por aquí.</div>';
+}
+
+/* ---------- PENDIENTES ---------- */
+let TODOS=[], penFilter='Todos';
+const todayISO=()=>new Date().toISOString().slice(0,10);
+async function loadPendientes(){
+  const d=await call(T_TODO,{projectId:COZ_PROJ,limit:50});
+  if(d.__err){ $('penList').innerHTML='<div class="state err">No pude leer Todoist.</div>'; }
+  else{
+    TODOS=(d.tasks||[]).filter(t=>!t.checked);
+    const pr={p1:0,p2:1,p3:2,p4:3};
+    TODOS.sort((a,b)=>{
+      const oa=a.dueDate&&a.dueDate<todayISO()?-1:0, ob=b.dueDate&&b.dueDate<todayISO()?-1:0;
+      return oa-ob || (pr[a.priority]??9)-(pr[b.priority]??9) || (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+    });
+    const overdue=TODOS.filter(t=>t.dueDate&&t.dueDate<todayISO()).length;
+    $('penCount').textContent=TODOS.length+' abiertos · '+overdue+' atrasados';
+    if(overdue>0){ $('navDot').style.display='inline-block'; $('navDot').textContent=overdue; }
+    const filters=['Todos','Atrasados','Prioridad'];
+    $('penChips').innerHTML=filters.map(f=>`<button class="chip ${f===penFilter?'on':''}" data-f="${f}">${f}</button>`).join('');
+    $('penChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{penFilter=c.dataset.f;renderPen();});
+    renderPen();
+  }
+  loadAlerts();
+}
+function renderPen(){
+  let list=TODOS.slice();
+  if(penFilter==='Atrasados') list=list.filter(t=>t.dueDate&&t.dueDate<todayISO());
+  if(penFilter==='Prioridad') list=list.filter(t=>t.priority==='p1'||t.priority==='p2');
+  if(!list.length){$('penList').innerHTML='<div class="state">Nada por aquí.</div>';return;}
+  const prl={p1:'Alta',p2:'Media',p3:'Normal'};
+  $('penList').innerHTML=list.map((t,i)=>{
+    let txt=t.content||'', tag=''; const m=txt.match(/^\[([^\]]+)\]\s*/); if(m){tag=m[1];txt=txt.slice(m[0].length);}
+    const badges=[];
+    if(t.dueDate){ const od=t.dueDate<todayISO(), td=t.dueDate===todayISO();
+      badges.push(`<span class="b ${od?'due':td?'today':''}">${od?'Atrasada':td?'Hoy':fmtDue(t.dueDate)}</span>`); }
+    if(prl[t.priority]) badges.push(`<span class="b pri${t.priority[1]}">${prl[t.priority]}</span>`);
+    const desc=t.description?`<div class="desc">${esc(t.description)}</div><div class="exp">▾ ver menos</div>`:'';
+    const expand=t.description?`<div class="exp">▸ ver detalle</div>`:'';
+    return `<div class="todo ${t.priority}"><div class="txt">${tag?`<span class="tag">${esc(tag)}</span>`:''}${esc(txt)}</div><div class="badges">${badges.join('')}</div>${expand}${desc}</div>`;
+  }).join('');
+  $('penList').querySelectorAll('.todo').forEach(el=>{ if(el.querySelector('.desc')) el.onclick=()=>el.classList.toggle('open'); });
+}
+function fmtDue(iso){return new Date(iso+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'short'});}
+async function loadAlerts(){
+  const wait=setInterval(()=>{
+    if(PROJ.length||document.querySelector('#projList .state.err')){
+      clearInterval(wait);
+      const al=PROJ.filter(p=>p.alerta&&!/^ok$/i.test(p.alerta)&&!/^n\/a/i.test(p.alerta));
+      if(!al.length){$('alertList').innerHTML='<div class="state">Sin alertas.</div>';return;}
+      $('alertList').innerHTML=al.map(p=>`<div class="todo p3"><div class="txt">${esc(p.cli)}${p.saldo>0?` · <span class="neg">${clp(p.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(p.alerta)}</div></div>`).join('');
+    }
+  },300); setTimeout(()=>clearInterval(wait),6000);
+}
+
+/* ---------- AGENDA ---------- */
+async function loadAgenda(){
+  const now=new Date(), end=new Date(now.getTime()+7*864e5);
+  const d=await call(T_CAL,{startTime:now.toISOString(),endTime:end.toISOString(),pageSize:20,orderBy:'startTime'});
+  if(d.__err){$('agendaCard').innerHTML='<div class="state err">No pude leer el calendario.</div>';}
+  else{
+    const evs=(d.events||[]).filter(e=>e.status!=='cancelled');
+    if(!evs.length){$('agendaCard').innerHTML='<div class="state">Nada agendado esta semana.</div>';}
+    else $('agendaCard').innerHTML=evs.map(e=>{
+      const dt=new Date(e.start.dateTime||e.start.date+'T12:00:00'); const allday=!e.start.dateTime;
+      const time=allday?'Todo el día':dt.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false});
+      const dow=dt.toLocaleDateString('es-CL',{weekday:'long'});
+      return `<div class="ev"><div class="d"><div class="day">${dt.getDate()}</div><div class="mo">${dt.toLocaleDateString('es-CL',{month:'short'})}</div></div><div class="b2"><div class="s">${esc(e.summary||'(sin título)')}</div><div class="t">${dow} · ${time}</div></div></div>`;
+    }).join('');
+  }
+  loadDin();
+}
+async function loadDin(){
+  const d=await call(T_DRIVE,{fileId:F_DIN}); const md=d.fileContent||d.text;
+  if(d.__err||!md){$('dinCard').innerHTML='<div class="state">No disponible.</div>';return;}
+  const rows=parseTable(md); const head=rows[0].map(h=>h.toLowerCase());
+  const ci={fecha:head.findIndex(h=>h.includes('fecha')),merc:head.findIndex(h=>h.includes('mercancia')),
+    ped:head.findIndex(h=>h.includes('pedido')),nota:head.findIndex(h=>h.includes('nota'))};
+  const items=rows.slice(1).filter(r=>r[ci.merc]||r[ci.ped]).slice(-6).reverse();
+  if(!items.length){$('dinCard').innerHTML='<div class="state">Sin importaciones.</div>';return;}
+  $('dinCard').innerHTML=items.map(r=>`<div class="ev"><div class="b2"><div class="s">${esc(r[ci.ped]||r[ci.merc]||'—')}</div><div class="t">${esc(r[ci.fecha]||'')} · ${esc(r[ci.merc]||'')}${r[ci.nota]?' · '+esc(r[ci.nota]):''}</div></div></div>`).join('');
+}
+
+/* ---------- POSTS ---------- */
+function weekKey(){const d=new Date();const on=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=on.getUTCDay()||7;on.setUTCDate(on.getUTCDate()+4-day);const ys=new Date(Date.UTC(on.getUTCFullYear(),0,1));const wn=Math.ceil((((on-ys)/864e5)+1)/7);return on.getUTCFullYear()+'-W'+wn;}
+function loadPosts(){
+  const key='coz_posts_'+weekKey(); const state=JSON.parse(localStorage.getItem(key)||'{}');
+  const plats=['Instagram','Facebook','Web / blog','TikTok','LinkedIn'];
+  const mon=new Date(); const dd=mon.getDay()||7; mon.setDate(mon.getDate()-dd+1); const sun=new Date(mon); sun.setDate(sun.getDate()+6);
+  $('weekLbl').textContent='Semana '+mon.toLocaleDateString('es-CL',{day:'numeric',month:'short'})+' – '+sun.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+  $('posts').innerHTML=plats.map(p=>`<div class="post"><span class="n">${p}</span><div class="tgl ${state[p]?'on':''}" data-p="${p}"><i></i></div></div>`).join('');
+  $('posts').querySelectorAll('.tgl').forEach(t=>t.onclick=()=>{const p=t.dataset.p; state[p]=!state[p]; t.classList.toggle('on',state[p]); localStorage.setItem(key,JSON.stringify(state));});
+}
+
+/* ---------- nav ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); $('v-'+b.dataset.v).classList.add('active');
+  window.scrollTo({top:0});
+});
+
+$('updated').textContent='Foto del 5 jul 2026';
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
+loadInicio(); loadProyectos(); loadPendientes(); loadAgenda(); loadPosts();
+</script>
