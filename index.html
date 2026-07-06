@@ -208,7 +208,10 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
   <section id="v-inicio" class="view active">
     <h2>Resumen 2026</h2>
     <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
-    <h2>En qué se va la plata · 2026</h2>
+    <div id="ventasDet"></div>
+    <h2>Meta del año</h2>
+    <div class="card" id="metaAnioCard"><div class="state">Cargando…</div></div>
+    <h2>Presupuesto · en qué se va la caja</h2>
     <div class="card" id="gastosVizCard"><div class="state">Cargando…</div></div>
     <p class="tiny">Todo en neto (sin IVA), en vivo desde tu hoja. La plata con IVA (recibida y por cobrar) está en la pestaña Sueldo.</p>
   </section>
@@ -385,8 +388,12 @@ const FIX_TASKS=[
 ];
 const FIX_EVENTS=[
  {summary:"Café con la Isi lama",status:"confirmed",start:{dateTime:"2026-07-07T16:30:00-04:00"}},
- {summary:"Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-08T10:00:00-04:00"}},
- {summary:"Baby shower vale y pil",status:"confirmed",start:{dateTime:"2026-07-11T12:00:00-04:00"}}
+ {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-08T10:00:00-04:00"}},
+ {summary:"Reunión cowork Agustín · Vitacura",status:"confirmed",start:{dateTime:"2026-07-10T11:00:00-04:00"}},
+ {summary:"Centro cultural España (paqui)",status:"confirmed",start:{dateTime:"2026-07-10T19:00:00-04:00"}},
+ {summary:"Baby shower vale y pil",status:"confirmed",start:{dateTime:"2026-07-11T12:00:00-04:00"}},
+ {summary:"Hora Carolina Alessandri · Providencia",status:"confirmed",start:{dateTime:"2026-07-13T16:00:00-04:00"}},
+ {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-15T10:00:00-04:00"}}
 ];
 async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
@@ -437,6 +444,31 @@ async function loadInicio(){
   ];
   $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 
+  // INICIO — ventas desplegables (facturas) + ticket promedio
+  const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
+  let facturasHTML='', avgDis=0, avgImp=0;
+  if(crows.length>1){
+    const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),neto:c('monto neto'),fac:c('n factura')};
+    const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
+    const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
+    facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
+    const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
+    const avg=a=>a.length?a.reduce((s,r)=>s+toNum(r[ci.neto]),0)/a.length:0;
+    avgDis=avg(dis); avgImp=avg(imp);
+  }
+  $('ventasDet').innerHTML=`<div id="vtoggle" style="text-align:center;font-size:12px;font-weight:800;color:var(--peri);padding:11px;cursor:pointer">▸ Ver las facturas del año</div><div id="vlist" class="card" style="display:none;margin-top:-4px">${facturasHTML||'<div class="state">Sin facturas.</div>'}</div>`;
+  const vt=$('vtoggle'); if(vt) vt.onclick=()=>{const l=$('vlist'); const o=l.style.display==='none'; l.style.display=o?'block':'none'; vt.textContent=o?'▾ Ocultar facturas':'▸ Ver las facturas del año';};
+
+  // INICIO — meta del año (utilidad para Cocó)
+  const metaUtil=5000000, proyU=util+utilReal, pctM=Math.min(100,proyU/metaUtil*100), sobra=proyU-metaUtil;
+  $('metaAnioCard').innerHTML=
+    `<div class="meta-top"><b>$1.000.000/mes para ti · ago–dic</b><span class="pk" style="font-size:11px">meta $5M</span></div>
+     <div class="metapct" style="color:${sobra>=0?'var(--ok)':'var(--peri-ink)'};margin:8px 0 2px">${pctM.toFixed(0)}%</div>
+     <div class="bar"><i style="width:${pctM}%;background:${sobra>=0?'linear-gradient(90deg,#3f7a54,#8bc39a)':'linear-gradient(90deg,#6f6fc9,#a6a6e6)'}"></i></div>
+     <div class="legend"><span>Proyectas ${clpShort(proyU)} de utilidad</span><span>${sobra>=0?'Sobra '+clpShort(sobra):'Falta '+clpShort(-sobra)}</span></div>
+     <div class="oneline">Ya tienes <b>${clpShort(util)}</b> ganados y <b>${clpShort(utilReal)}</b> en curso — con eso cubres tu meta${sobra>=0?' y sobra un poco':''}. Lo clave: <b>cobrar los saldos</b>. Ticket promedio: diseño ~${clpShort(avgDis)} · importación ~${clpShort(avgImp)} por venta.</div>`;
+
   // INICIO — barra apilada de gastos por categoría
   const gtot=telas+imp+oper||1;
   $('gastosVizCard').innerHTML=
@@ -446,11 +478,11 @@ async function loadInicio(){
        <div style="width:${(oper/gtot*100).toFixed(1)}%;background:#7a8450"></div>
      </div>
      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px;text-align:center">
-       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#6f6fc9;margin-right:5px"></span>TELAS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(telas)}</div></div>
-       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#c69a4a;margin-right:5px"></span>IMPUESTOS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(imp)}</div></div>
-       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#7a8450;margin-right:5px"></span>OPERACIÓN</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(oper)}</div></div>
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#6f6fc9;margin-right:5px"></span>TELAS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(telas)}</div><div style="font-size:10px;color:var(--muted);margin-top:1px">${(telas/gtot*100).toFixed(0)}%</div></div>
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#c69a4a;margin-right:5px"></span>IMPUESTOS</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(imp)}</div><div style="font-size:10px;color:var(--muted);margin-top:1px">${(imp/gtot*100).toFixed(0)}%</div></div>
+       <div style="flex:1"><div style="font-size:10px;color:var(--muted);font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#7a8450;margin-right:5px"></span>OPERACIÓN</div><div style="font-size:14px;font-weight:800;margin-top:3px">${clpShort(oper)}</div><div style="font-size:10px;color:var(--muted);margin-top:1px">${(oper/gtot*100).toFixed(0)}%</div></div>
      </div>
-     <div class="oneline">Total gastos 2026: <b>${clp(gastos)}</b>. El IVA es plata que pasa del cliente al SII — no daña tu utilidad.</div>`;
+     <div class="oneline">Presupuesto gastado 2026: <b>${clp(gastos)}</b>. El IVA es plata que pasa del cliente al SII — no daña tu utilidad.</div>`;
 
   // SUELDO — dona: ya ganado vs por venir
   const totalU=util+utilReal, frG=totalU>0?util/totalU:0;
