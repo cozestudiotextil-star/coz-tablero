@@ -125,6 +125,7 @@ h2{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--p
 .p-abono{background:var(--warnbg); color:var(--warn)}
 .p-prod{background:var(--infobg); color:var(--info)}
 .p-prospecto{background:var(--peri-soft); color:var(--peri-ink)}
+.p-caido{background:#efe7e7; color:#9a6a62}
 .proj .nums{display:flex; gap:16px; margin-top:10px; flex-wrap:wrap}
 .proj .nums div{font-size:11px; color:var(--muted)}
 .proj .nums b{display:block; font-size:13px; color:var(--ink); font-weight:800}
@@ -176,6 +177,14 @@ nav button{flex:1; background:none; border:0; color:var(--muted); font-size:10px
 nav button.on{color:var(--peri)}
 nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%); width:20px; height:2px; border-radius:2px; background:var(--peri)}
 .dot{display:inline-block; min-width:16px; height:16px; line-height:16px; font-size:9px; border-radius:999px; background:var(--bad); color:#fff; font-weight:800; margin-left:3px; padding:0 3px}
+#fab{position:fixed; right:14px; bottom:calc(66px + env(safe-area-inset-bottom)); z-index:40; background:var(--peri); color:#fff; border:0; border-radius:999px; padding:12px 18px; font-size:13px; font-weight:800; box-shadow:0 4px 16px rgba(111,111,201,.45); cursor:pointer; display:flex; align-items:center; gap:8px}
+#fab svg{width:16px; height:16px}
+#fab.spin svg{animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.fbk{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:13px; margin:20px 0 8px}
+.fbk-t{font-size:12px; font-weight:800; color:var(--peri-ink); margin-bottom:8px}
+.fbk textarea{width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:10px; font:13px/1.45 inherit; resize:vertical; min-height:58px; background:#fff; color:var(--ink)}
+.fbk-send{margin-top:9px; background:var(--peri); color:#fff; border:0; border-radius:9px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer}
 .state{font-size:12px; color:var(--muted); padding:16px; text-align:center}
 .err{color:var(--bad)}
 .tiny{font-size:10.5px; color:var(--muted); margin:2px 2px 0}
@@ -261,6 +270,8 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
   </section>
 </main>
 
+<button id="fab" aria-label="Actualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Actualizar</button>
+
 <nav>
   <button data-v="inicio" class="on">Inicio</button>
   <button data-v="sueldo">Sueldo</button>
@@ -345,7 +356,7 @@ const FIX_COT=`
 | COT-007 | La Mulata | Importacion telas (jun-2026) | En produccion | Si | 8552100 | 1624899 | 10176999 | F°78 (solo abono) | 7000000 | 3176999 | n/a (telas) |  | n/a | 3852664 | Falta factura del saldo 30% al entregar; decidir flete Turquia-Chile |
 | COT-009 | Brick London | Diseno estampado (Proyecto C) | Pagado | No (arrastrado 2025) | 260800 | 49552 | 310352 | F°76 |  |  | 123091 / 104320 | 67 | Si | 156480 | Falta 1 estampado por enviar |
 | COT-006 | Victoria Pey | Importacion telas (sedas) | Prospecto | No (hasta pagar) | 6134454 | 1165546 | 7300000 | - |  | 7300000 | n/a |  | n/a | 2888000 | Emitir boleta $240.000 del abono; decidir pedido grande |
-| COT-010 | Roca and Co | Diseno + telas | Prospecto | No | 9500000 | 1805000 | 11305000 | - |  |  | s/d |  |  |  | Prospecto no cerrado |
+| COT-010 | Roca and Co | Diseno + telas | Prospecto caido | No | 9500000 | 1805000 | 11305000 | - |  |  | s/d |  |  |  | Prospecto caido: el cliente sigue con su propio equipo |
 | COT-011 | Lanima | Diseno estampado | Abono hecho | Si | 490000 | 93100 | 583100 | FALTA factura | 250000 | 333100 | 245000 neto / 290035 bruto | s/n | revisar | 245000 | Falta cobrar saldo + factura |`;
 const FIX_DIN=`
 | N Doc | Tipo | Fecha | Importador | Mercancia | Cod Arancel | Valor CIF USD | Monto CLP | AWB / Ref | Pedido / Cliente | En Drive | Notas |
@@ -514,7 +525,8 @@ function estadoInfo(est,srv){
   const group=(e.includes('prospecto')||e.includes('no cerrado')||e===''||e==='-') ? 'Prospectos'
     : (s.includes('importacion')||s.includes('tela')) ? 'Telas' : 'Diseño';
   let cls,lbl;
-  if(e.includes('pagado')){cls='p-pagado';lbl='Pagado';}
+  if(e.includes('caido')||e.includes('caído')||e.includes('perdido')){cls='p-caido';lbl='Prospecto caído';}
+  else if(e.includes('pagado')){cls='p-pagado';lbl='Pagado';}
   else if(e.includes('produccion')){cls='p-prod';lbl='En producción';}
   else if(e.includes('abono')){cls='p-proceso';lbl='En proceso';}
   else if(e.includes('prospecto')){cls='p-prospecto';lbl='Prospecto';}
@@ -670,7 +682,27 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 });
 
 async function refreshInicio(){ await loadInicio(); $('updated').textContent = window.__LIVE ? ('Actualizado '+new Date().toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : 'Datos guardados (sin conexión)'; }
-$('refreshBtn').onclick=()=>{ $('refreshBtn').textContent='Actualizando…'; refreshInicio().finally(()=>{ $('refreshBtn').textContent='Actualizar'; }); };
+function doRefresh(){ const f=$('fab'); if(f) f.classList.add('spin'); const rb=$('refreshBtn'); if(rb) rb.textContent='Actualizando…'; refreshInicio().finally(()=>{ if(f) f.classList.remove('spin'); if(rb) rb.textContent='Actualizar'; }); }
+$('refreshBtn').onclick=doRefresh;
+$('fab').onclick=doRefresh;
+
+// Cajas de feedback en cada sección
+const SEC_NOMBRE={inicio:'Inicio',sueldo:'Sueldo',proyectos:'Proyectos',pendientes:'Pendientes',agenda:'Agenda',posts:'Posts'};
+Object.keys(SEC_NOMBRE).forEach(id=>{
+  const sec=$('v-'+id); if(!sec) return;
+  const w=document.createElement('div'); w.className='fbk';
+  w.innerHTML='<div class="fbk-t">¿Algo que corregir o actualizar aquí?</div><textarea placeholder="Escribe lo que ves o lo que hay que cambiar…"></textarea><button class="fbk-send">Enviar</button>';
+  const ta=w.querySelector('textarea'), btn=w.querySelector('button');
+  btn.onclick=()=>{ const v=ta.value.trim(); if(!v){ta.focus();return;}
+    const when=new Date().toLocaleString('es-CL');
+    const log=JSON.parse(localStorage.getItem('coz_feedback')||'[]'); log.push({sec:id,txt:v,when}); localStorage.setItem('coz_feedback',JSON.stringify(log));
+    const subject=encodeURIComponent('Tablero COZ — feedback: '+SEC_NOMBRE[id]);
+    const body=encodeURIComponent(v+'\n\n— Sección: '+SEC_NOMBRE[id]+' · '+when);
+    window.location.href='mailto:cozestudiotextil@gmail.com?subject='+subject+'&body='+body;
+    ta.value=''; btn.textContent='Enviado ✓'; setTimeout(()=>{btn.textContent='Enviar';},2500);
+  };
+  sec.appendChild(w);
+});
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 refreshInicio(); loadProyectos(); loadPendientes(); loadAgenda(); loadPosts();
 </script>
