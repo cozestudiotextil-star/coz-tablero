@@ -201,7 +201,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
     <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
     <h2>En qué se va la plata · 2026</h2>
     <div class="card" id="gastosVizCard"><div class="state">Cargando…</div></div>
-    <p class="tiny">Números en vivo desde tu hoja COZ_Gastos_y_Ventas.</p>
+    <p class="tiny">Todo en neto (sin IVA), en vivo desde tu hoja. La plata con IVA (recibida y por cobrar) está en la pestaña Sueldo.</p>
   </section>
 
   <!-- SUELDO -->
@@ -213,6 +213,8 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
       <div class="meta-top"><b id="metaLbl">Tu sueldo</b><button class="mini" id="editMeta">Editar</button></div>
       <div id="metaBody"></div>
     </div>
+    <h2>Cobros</h2>
+    <div class="card" id="cobrosCard"></div>
     <h2>Lo que tengo hoy</h2>
     <div class="card"><div class="reschip"><span class="rl">En el banco</span><span class="rv" id="cajaHoyBig">—</span></div>
       <div class="oneline">Plata disponible en la cuenta ahora mismo.</div></div>
@@ -413,14 +415,14 @@ async function loadInicio(){
   VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
 
   // INICIO — panel de KPIs (normal)
+  const ventasTotal=ventas+prod;
   const K=[
-    ['Ventas pagadas', clp(ventas), nv+' ventas · 2026', 'hero'],
-    ['Utilidad', clp(util), 'de lo pagado', ''],
+    ['Ventas del año (neto)', clp(ventasTotal), clpShort(ventas)+' cobradas · '+clpShort(prod)+' en producción', 'hero'],
+    ['Cobradas', clp(ventas), nv+' ventas listas', ''],
+    ['En producción', clp(prod), 'La Mulata y otros', ''],
+    ['Utilidad ya ganada', clp(util), 'de lo cobrado', ''],
     ['Gastos 2026', clp(gastos), 'neto', ''],
-    ['Por cobrar', clp(cobrar), 'saldos confirmados', ''],
-    ['En producción', clp(prod), 'con abono', ''],
-    ['Pipeline', clp(pipe), 'prospectos', ''],
-    ['Plata recibida', clp(abonos), 'abonos al día', 'wide'],
+    ['Pipeline', clp(pipe), 'posible · prospectos', 'wide'],
   ];
   $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 
@@ -451,6 +453,12 @@ async function loadInicio(){
     <div class="oneline">Cuando cierras y te pagan un proyecto, su parte <b>por venir</b> pasa a <b>ya ganado</b>.</div>`;
 
   renderMeta();
+
+  // SUELDO — cobros (plata real, con IVA)
+  $('cobrosCard').innerHTML=
+    row('Plata recibida (abonos)', clp(abonos))+
+    row('Por cobrar (saldos)', `<span class="neg">${clp(cobrar)}</span>`)+
+    `<div class="oneline">Esta es plata real (con IVA). Aquí está tu abono de <b>$7.000.000 de La Mulata</b>, dentro de "plata recibida".</div>`;
 
   // SUELDO/CAJA — hoy, este mes, pagos
   const pagos=between('por pagar julio','proyeccion fin de mes');
