@@ -187,7 +187,10 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
       <div class="brand">COZ <small>/</small> ESTUDIO TEXTIL</div>
       <div class="sub">Tablero del negocio · lee del maestro</div>
     </div>
-    <div class="updated" id="updated"></div>
+    <div style="text-align:right">
+      <button id="refreshBtn" style="font-size:11px;font-weight:800;color:#fff;background:#6f6fc9;border:0;border-radius:8px;padding:6px 12px;cursor:pointer">Actualizar</button>
+      <div class="updated" id="updated" style="margin-top:4px"></div>
+    </div>
   </div>
 </header>
 
@@ -284,6 +287,14 @@ const COZ_PROJ="6gmqpM25vm5JpXwJ";
 const T_DRIVE="mcp__272cdf6e-d2ce-40f5-a345-5a44c714ba54__read_file_content";
 const T_CAL="mcp__62296dc6-cfe8-4832-afe2-c03efbf3b4f2__list_events";
 const T_TODO="mcp__4209a9dd-0877-4cae-8998-197da33d196a__find-tasks";
+const LECTURA_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=594376880&single=true&output=csv";
+function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c==='"')q=true; else if(c===','){row.push(cur);cur='';} else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';} else if(c==='\r'){} else cur+=c; } }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows; }
+function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
 
 const clp=n=>isFinite(n)?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';
 function clpShort(n){ if(!isFinite(n))return'—'; const a=Math.abs(n), s=n<0?'-':'';
@@ -377,7 +388,7 @@ const FIX_EVENTS=[
 ];
 async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
-    if(f===F_MAIN) return {fileContent:FIX_MAIN};
+    if(f===F_MAIN){ try{ const r=await fetch(LECTURA_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('VENTAS')) throw 0; window.__LIVE=true; return {fileContent:csvToPipe(t)}; }catch(e){ window.__LIVE=false; return {fileContent:FIX_MAIN}; } }
     if(f===F_COT) return {fileContent:FIX_COT};
     if(f===F_DIN) return {fileContent:FIX_DIN}; }
   if(name===T_TODO) return {tasks:FIX_TASKS};
@@ -665,7 +676,8 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   window.scrollTo({top:0});
 });
 
-$('updated').textContent='Foto del 5 jul 2026';
+async function refreshInicio(){ await loadInicio(); $('updated').textContent = window.__LIVE ? ('Actualizado '+new Date().toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : 'Datos guardados (sin conexión)'; }
+$('refreshBtn').onclick=()=>{ $('refreshBtn').textContent='Actualizando…'; refreshInicio().finally(()=>{ $('refreshBtn').textContent='Actualizar'; }); };
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
-loadInicio(); loadProyectos(); loadPendientes(); loadAgenda(); loadPosts();
+refreshInicio(); loadProyectos(); loadPendientes(); loadAgenda(); loadPosts();
 </script>
