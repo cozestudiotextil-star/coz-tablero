@@ -208,7 +208,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
     <h2>Resumen 2026</h2>
     <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
     <div id="ventasDet"></div>
-    <h2>Meta del año</h2>
+    <h2>Meta hasta diciembre</h2>
     <div class="card" id="metaAnioCard"><div class="state">Cargando…</div></div>
     <h2>Presupuesto · en qué se va la caja</h2>
     <div class="card" id="gastosVizCard"><div class="state">Cargando…</div></div>
@@ -350,9 +350,7 @@ const FIX_MAIN=`
 | Proyeccion fin de mes | $3.549.543 |`;
 const FIX_COT=`
 | ID | Cliente | Servicio | Estado pipeline | Cuenta en 2026 | Monto neto | IVA 19% | Total c/IVA | N factura | Abono recibido | Saldo por cobrar | Honorario Consuelo (bruto / liq) | Boleta Consuelo N | Consuelo pagada | Utilidad Coco | ALERTA / a confirmar |
-| COT-001 | Minisima | Diseno estampado | Pagado | No (arrastrado 2025) | 1078750 | 204963 | 1283713 | Orazem F°74 |  |  | revisar posible BHE 68 | 68? | revisar | 431500 | Confirmar honorario Consuelo |
-| COT-002 | Brick London | Diseno estampado (Proyecto A) | Pagado | Si | 1137500 | 216125 | 1353625 | F°71 + F°72 | abono+saldo | pagado | 641522 / 543690 | 61 | Si | 495978 | Corregir folio N factura |
-| COT-003 | La Mulata | Importacion telas | Pagado | Si | 3483800 | 661922 | 4145722 | Un Toque F°77 | 1380358 | 0 (pagado) | n/a (telas) |  | n/a | 1145699 | OK |
+| COT-001 | Minisima | Diseno estampado | Pagado | No (arrastrado 2025) | 1078750 | 204963 | 1283713 | Orazem F°74 |  |  | revisar posible BHE 68 | 68? | revisar | 431500 | Confirmar honorario Consuelo || COT-003 | La Mulata | Importacion telas | Pagado | Si | 3483800 | 661922 | 4145722 | Un Toque F°77 | 1380358 | 0 (pagado) | n/a (telas) |  | n/a | 1145699 | OK |
 | COT-004 | Outlet / venta inmediata | Importacion telas (stock viejo) | Pagado | Si | 85336 | 16214 | 101550 | Boleta 51 |  | 0 (pagado) | n/a |  | n/a | 85336 | OK |
 | COT-005 | Gonzalo Heresi / Sienna | Diseno estampado | Abono hecho | Si | 440000 | 83600 | 523600 | FALTA factura saldo | 200000 | 323600 | 0 (Coco, sin costo) | - | n/a | 440000 | Entregado: falta cobrar saldo + emitir factura |
 | COT-007 | La Mulata | Importacion telas (jun-2026) | En produccion | Si | 8552100 | 1624899 | 10176999 | F°78 (solo abono) | 7000000 | 3176999 | n/a (telas) |  | n/a | 3852664 | Falta factura del saldo 30% al entregar; decidir flete Turquia-Chile |
@@ -443,30 +441,34 @@ async function loadInicio(){
   ];
   $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 
-  // INICIO — ventas desplegables (facturas) + ticket promedio
+  // INICIO — ventas desplegables (facturas) + promedios por tipo
   const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
-  let facturasHTML='', avgDis=0, avgImp=0;
+  let facturasHTML='', avgUtilDis=0, maxUtilImp=0;
   if(crows.length>1){
     const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
-    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),neto:c('monto neto'),fac:c('n factura')};
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura')};
     const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
-    const avg=a=>a.length?a.reduce((s,r)=>s+toNum(r[ci.neto]),0)/a.length:0;
-    avgDis=avg(dis); avgImp=avg(imp);
+    const uds=dis.map(r=>toNum(r[ci.util])).filter(x=>x>0); avgUtilDis=uds.length?uds.reduce((s,x)=>s+x,0)/uds.length:0;
+    maxUtilImp=Math.max(0,...imp.map(r=>toNum(r[ci.util])));
   }
   $('ventasDet').innerHTML=`<div id="vtoggle" style="text-align:center;font-size:12px;font-weight:800;color:var(--peri);padding:11px;cursor:pointer">▸ Ver las facturas del año</div><div id="vlist" class="card" style="display:none;margin-top:-4px">${facturasHTML||'<div class="state">Sin facturas.</div>'}</div>`;
   const vt=$('vtoggle'); if(vt) vt.onclick=()=>{const l=$('vlist'); const o=l.style.display==='none'; l.style.display=o?'block':'none'; vt.textContent=o?'▾ Ocultar facturas':'▸ Ver las facturas del año';};
 
-  // INICIO — meta del año (utilidad para Cocó)
-  const metaUtil=5000000, proyU=util+utilReal, pctM=Math.min(100,proyU/metaUtil*100), sobra=proyU-metaUtil;
+  // INICIO — meta hasta diciembre (en base a CAJA)
+  const sueldoM=getSueldo(), gastosM=getGastosMes(), saleM=sueldoM+gastosM, mesesR=mesesRestantes()||5;
+  const caja=proj, need=saleM*mesesR, falta=Math.max(0,need-caja), runwayM=saleM>0?caja/saleM:0;
+  const coverM=need>0?Math.min(100,caja/need*100):0;
+  const mesNom=['agosto','septiembre','octubre','noviembre','diciembre'], hasta=mesNom[Math.min(4,Math.floor(runwayM))];
+  const nDis=avgUtilDis>0?Math.ceil(falta/avgUtilDis):0;
   $('metaAnioCard').innerHTML=
-    `<div class="meta-top"><b>$1.000.000/mes para ti · ago–dic</b><span class="pk" style="font-size:11px">meta $5M</span></div>
-     <div class="metapct" style="color:${sobra>=0?'var(--ok)':'var(--peri-ink)'};margin:8px 0 2px">${pctM.toFixed(0)}%</div>
-     <div class="bar"><i style="width:${pctM}%;background:${sobra>=0?'linear-gradient(90deg,#3f7a54,#8bc39a)':'linear-gradient(90deg,#6f6fc9,#a6a6e6)'}"></i></div>
-     <div class="legend"><span>Proyectas ${clpShort(proyU)} de utilidad</span><span>${sobra>=0?'Sobra '+clpShort(sobra):'Falta '+clpShort(-sobra)}</span></div>
-     <div class="oneline">Ya tienes <b>${clpShort(util)}</b> ganados y <b>${clpShort(utilReal)}</b> en curso — con eso cubres tu meta${sobra>=0?' y sobra un poco':''}. Lo clave: <b>cobrar los saldos</b>. Ticket promedio: diseño ~${clpShort(avgDis)} · importación ~${clpShort(avgImp)} por venta.</div>`;
+    `<div class="meta-top"><b>Pagarte + gastos hasta diciembre</b><span class="pk" style="font-size:11px">ago–dic · ${mesesR} meses</span></div>
+     <div class="metapct" style="color:var(--bad);margin:8px 0 2px">Faltan ${clpShort(falta)}</div>
+     <div class="bar"><i style="width:${coverM.toFixed(0)}%;background:linear-gradient(90deg,#6f6fc9,#a6a6e6)"></i></div>
+     <div class="legend"><span>Caja te alcanza ~${runwayM.toFixed(1).replace('.',',')} meses</span><span>Necesitas ${clpShort(need)}</span></div>
+     <div class="oneline">Con la caja de hoy (${clpShort(caja)}, ya cobrando La Mulata) llegas <b>hasta ~${hasta}</b>. Para pagarte + gastos hasta diciembre y que sobre, tienes que <b>cerrar ~${clpShort(falta)}</b> de utilidad nueva — ≈ una importación grande tipo La Mulata (deja ~${clpShort(maxUtilImp)}) más un par de diseños, o del orden de <b>~${nDis} proyectos de diseño</b>.</div>`;
 
   // INICIO — barra apilada de gastos por categoría
   const gtot=telas+imp+oper||1;
