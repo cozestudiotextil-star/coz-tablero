@@ -468,7 +468,8 @@ async function loadInicio(){
      <div class="metapct" style="color:var(--bad);margin:8px 0 2px">Faltan ${clpShort(falta)}</div>
      <div class="bar"><i style="width:${coverM.toFixed(0)}%;background:linear-gradient(90deg,#6f6fc9,#a6a6e6)"></i></div>
      <div class="legend"><span>Caja te alcanza ~${runwayM.toFixed(1).replace('.',',')} meses</span><span>Necesitas ${clpShort(need)}</span></div>
-     <div class="oneline">Con la caja de hoy (${clpShort(caja)}, ya cobrando La Mulata) llegas <b>hasta ~${hasta}</b>. Para pagarte + gastos hasta diciembre y que sobre, tienes que <b>cerrar ~${clpShort(falta)}</b> de utilidad nueva — ≈ una importación grande tipo La Mulata (deja ~${clpShort(maxUtilImp)}) más un par de diseños, o del orden de <b>~${nDis} proyectos de diseño</b>.</div>`;
+     <div class="oneline">Con la caja de hoy (${clpShort(caja)}, ya cobrando La Mulata) llegas <b>hasta ~${hasta}</b>. Para pagarte + gastos hasta diciembre y que sobre, tienes que <b>cerrar ~${clpShort(falta)}</b> de utilidad nueva — ≈ una importación grande tipo La Mulata (deja ~${clpShort(maxUtilImp)}) más un par de diseños, o del orden de <b>~${nDis} proyectos de diseño</b>.</div>
+     <div style="background:var(--peri-soft);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:13px;color:var(--peri-ink);font-weight:800">Objetivo: cerrar 1 importación de ~${clpShort(falta/0.45)} neto (rango $8–10M) de aquí a diciembre.</div>`;
 
   // INICIO — barra apilada de gastos por categoría
   const gtot=telas+imp+oper||1;
