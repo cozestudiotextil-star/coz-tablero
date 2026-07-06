@@ -197,8 +197,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
       <div class="sub">Tablero del negocio · lee del maestro</div>
     </div>
     <div style="text-align:right">
-      <button id="refreshBtn" style="font-size:11px;font-weight:800;color:#fff;background:#6f6fc9;border:0;border-radius:8px;padding:6px 12px;cursor:pointer">Actualizar</button>
-      <div class="updated" id="updated" style="margin-top:4px"></div>
+      <div class="updated" id="updated"></div>
     </div>
   </div>
 </header>
@@ -715,7 +714,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 
 async function refreshInicio(){ await loadInicio(); $('updated').textContent = window.__LIVE ? ('Actualizado '+new Date().toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : 'Datos guardados (sin conexión)'; }
 function doRefresh(){ const f=$('fab'); if(f) f.classList.add('spin'); const rb=$('refreshBtn'); if(rb) rb.textContent='Actualizando…'; refreshInicio().finally(()=>{ if(f) f.classList.remove('spin'); if(rb) rb.textContent='Actualizar'; }); }
-$('refreshBtn').onclick=doRefresh;
+{const rb0=$('refreshBtn'); if(rb0) rb0.onclick=doRefresh;}
 $('fab').onclick=doRefresh;
 
 // Cajas de feedback en cada sección
