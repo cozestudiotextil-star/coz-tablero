@@ -388,28 +388,30 @@ const FIX_DIN=`
 | DINC-2580960 | Cargo DHL | 2026-03-20 | AG Design SPA | Derechos aduana + IVA | - | - | 18.609 | AWB 3434315080 | La Mulata N77 | Si | Pago DHL import marzo |
 | 237983161 | DIN | 2026-03 | AG Design SPA | Importacion tela | s/d | s/d |  | AWB 3434315080 | La Mulata N77 | Si |  |`;
 const FIX_TASKS=[
- {content:"[COCÓ] Victoria Pey (COT-006): emitir boleta $240.000 + decidir pedido sedas",priority:"p1",dueDate:"2026-07-03",checked:false,description:"Abono $240.000 recibido 29-jun. Muestras de seda llegaron. Emitir boleta (atrasada); decidir pedido grande ($7.300.000) y aclarar doble IVA con el contador."},
- {content:"[COCÓ] Cambio de contador: Alejandro Marianjel (traspaso desde Pablo Arcos)",priority:"p1",dueDate:"2026-06-25",checked:false,description:"Enviar balance 8 columnas + libro mayor a Alejandro; coordinar arranque; avisar a las propuestas descartadas."},
- {content:"[COCÓ] Regularizar patente comercial AG Design",priority:"p1",dueDate:"2026-06-19",checked:false,description:"Patentes provisorias caducaron 2023. Decidir cambio de domicilio SII (Vitacura). Hablar con el contador y armar el pack de documentos."},
  {content:"[COCÓ] Cerrar empresa VEXA con contador",priority:"p1",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] La Mulata (COT-007): flete, prints, comprobantes y saldo",priority:"p2",dueDate:"2026-06-25",checked:false,description:"En producción. Abono 70% recibido; saldo $3.176.999. Decidir flete Turquía-Chile, confirmar fecha con Bilge, cobrar al entregar."},
- {content:"[COCÓ] Sienna — seguimiento estampador (Gonzalo)",priority:"p2",dueDate:"2026-06-25",checked:false,description:"Diseños enviados al estampador. Esperando aprobación; hacer follow-up."},
- {content:"[COCÓ] L'anima (COT-011): reunión diseño y cobrar saldo $333.100",priority:"p2",dueDate:"2026-07-03",checked:false,description:"Abono $250.000 recibido. Avanzar prints tras la reunión, entregar y cobrar saldo."},
- {content:"[RUTINA] Revisar gastos marcados REVISAR + comprobante Dropbox",priority:"p3",dueDate:"2026-06-23",checked:false,description:""},
+ {content:"[COCÓ] Regularizar patente comercial AG Design",priority:"p1",dueDate:"2026-06-19",checked:false,description:"Patentes provisorias caducaron 2023. Decidir cambio de domicilio SII (Vitacura). Hablar con el contador."},
+ {content:"[COCÓ] La Mulata (COT-007): pagar flete REM + cobrar saldo $3.176.999",priority:"p2",dueDate:"2026-07-08",checked:false,description:"En producción. Flete REM ya elegido ($1.240.701). Pagar flete + 50% Beztas; confirmar timing con Bilge; cobrar saldo al entregar."},
+ {content:"[COCÓ] L'anima (COT-011): reunión mañana 9-jul 10:00 + cobrar saldo $333.100",priority:"p2",dueDate:"2026-07-09",checked:false,description:"Reunión confirmada jueves 9-jul 10:00 (Meet). Preparar avances de los 3 estampados; tras entrega, cobrar saldo."},
+ {content:"[COCÓ] Roca and Co: buscar telas nuevas para mostrar (sigue prospecto)",priority:"p3",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Responder a Fiona (JL-Silk) sobre seda viscosa estampada",priority:"p3",dueDate:"",checked:false,description:"JL-Silk confirmó dividir 100m en 5 diseños y pañuelos terminados. Decidir siguiente paso y responder."},
  {content:"[COCÓ] Lead pañuelos seda: cotizar 12 pañuelos estampados",priority:"p3",dueDate:"",checked:false,description:""},
- {content:"[RUTINA] Registrar 2 facturas (Global 81 + Acepta.com)",priority:"p3",dueDate:"2026-06-30",checked:false,description:""},
  {content:"[COCÓ] Brick London — estampado (Consuelo)",priority:"p3",dueDate:"",checked:false,description:""},
+ {content:"[RUTINA] Revisar gastos marcados REVISAR + comprobante Dropbox",priority:"p3",dueDate:"2026-06-23",checked:false,description:""},
+ {content:"[RUTINA] Registrar 2 facturas (Global 81 + Acepta.com)",priority:"p3",dueDate:"2026-06-30",checked:false,description:""},
+ {content:"Pedir tarjeta de débito Santander (la actual está bloqueada)",priority:"p4",dueDate:"",checked:false,description:""},
  {content:"[COCÓ] Actualizar portafolio coz",priority:"p4",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] Buscar cursos de print online",priority:"p4",dueDate:"",checked:false,description:""},
  {content:"[COCÓ] Actualizar web con nuevo inicio",priority:"p4",dueDate:"",checked:false,description:""},
  {content:"[COCÓ] Planificar expansión ads (papel mural, papelería)",priority:"p4",dueDate:"2026-07-26",checked:false,description:""}
 ];
 const FIX_EVENTS=[
- {summary:"Café con la Isi lama",status:"confirmed",start:{dateTime:"2026-07-07T16:30:00-04:00"}},
- {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-08T10:00:00-04:00"}},
+ {summary:"Reunión avances L'anima (Coco + Consuelo)",status:"confirmed",start:{dateTime:"2026-07-08T13:30:00-04:00"}},
+ {summary:"Reunión Denise Yates · clienta telas · Vitacura",status:"confirmed",start:{dateTime:"2026-07-08T16:30:00-04:00"}},
+ {summary:"Avances prints L'anima - Coz",status:"confirmed",start:{dateTime:"2026-07-09T10:00:00-04:00"}},
  {summary:"Reunión cowork Agustín · Vitacura",status:"confirmed",start:{dateTime:"2026-07-10T11:00:00-04:00"}},
  {summary:"Centro cultural España (paqui)",status:"confirmed",start:{dateTime:"2026-07-10T19:00:00-04:00"}},
  {summary:"Baby shower vale y pil",status:"confirmed",start:{dateTime:"2026-07-11T12:00:00-04:00"}},
+ {summary:"Baby shower Lorenzo · casa Andreita",status:"confirmed",start:{dateTime:"2026-07-12T13:00:00-04:00"}},
+ {summary:"Reunión Minísima - Coz · cierre",status:"confirmed",start:{dateTime:"2026-07-13T09:00:00-04:00"}},
  {summary:"Hora Carolina Alessandri · Providencia",status:"confirmed",start:{dateTime:"2026-07-13T16:00:00-04:00"}},
  {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-15T10:00:00-04:00"}}
 ];
@@ -588,7 +590,7 @@ function estadoInfo(est,srv){
 async function loadProyectos(){
   const list=await getCotizaciones();
   if(!list){ $('projList').innerHTML='<div class="state err">No pude leer la hoja de cotizaciones (revisa tu conexión).</div>'; return; }
-  PROJ=list.filter(p=>{ const e=(p.est||'').toLowerCase(); return p.cli && !(e.includes('pre-2026')||e.includes('pre 2026')||e.includes('sin respuesta')||e.includes('caido')||e.includes('caído')||e.includes('perdido')||e.includes('anulado')); });
+  PROJ=list.filter(p=>{ const e=(p.est||'').toLowerCase(); return p.cli && !(e.includes('pagado')||e.includes('pre-2026')||e.includes('pre 2026')||e.includes('sin respuesta')||e.includes('caido')||e.includes('caído')||e.includes('perdido')||e.includes('anulado')); });
   const cats=['Todos','Diseño','Telas','Prospectos'];
   $('projChips').innerHTML=cats.map(e=>`<button class="chip ${e===projFilter?'on':''}" data-f="${e}">${e}</button>`).join('');
   $('projChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{projFilter=c.dataset.f;renderProj();});
