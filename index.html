@@ -299,27 +299,6 @@ function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   if(cur!==''||row.length){row.push(cur);rows.push(row);}
   return rows; }
 function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
-const COT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=569924585&single=true&output=csv";
-async function getCotizaciones(){
-  try{
-    const t=await (await fetch(COT_CSV+'&t='+Date.now(),{cache:'no-store'})).text();
-    if(!t||!/cliente/i.test(t)) throw 0;
-    const rows=parseCSV(t);
-    const hi=rows.findIndex(r=>r.some(c=>c.trim().toLowerCase()==='cliente')&&r.some(c=>c.trim().toLowerCase()==='estado'));
-    if(hi<0) throw 0;
-    const H=rows[hi], ix=f=>H.findIndex(c=>c.trim().toLowerCase().includes(f));
-    const ci={id:ix('id'),cli:ix('cliente'),srv:ix('servicio'),est:ix('estado'),neto:ix('monto neto'),total:ix('total c/iva'),util:ix('utilidad'),saldo:ix('saldo'),fac:ix('factura'),abono:ix('abono'),hon:ix('honorario'),alerta:ix('alerta')};
-    return rows.slice(hi+1).filter(r=>((ci.cli>=0?r[ci.cli]:'')||'').trim()).map(r=>{
-      const g=k=>(ci[k]>=0?(r[ci[k]]||''):'').trim();
-      const fac=g('fac'), abono=toNum(g('abono'));
-      const facturado=(!fac||/falta|^-$/i.test(fac))?('No'+(abono>0?` · abono ${clp(abono)}`:'')):('Sí · '+fac);
-      let hon=g('hon'), consuelo='';
-      if(/n\/a/i.test(hon)) consuelo='No participa';
-      else if(hon&&!/sin costo/i.test(hon)&&hon!=='0') consuelo=hon;
-      return {id:g('id'),cli:g('cli'),srv:g('srv'),est:g('est'),neto:toNum(g('neto')),total:toNum(g('total')),saldo:toNum(g('saldo')),util:toNum(g('util')),fac,facturado,consuelo,alerta:(g('alerta')||'').replace(/^ok$/i,'')};
-    });
-  }catch(e){ return null; }
-}
 
 const clp=n=>isFinite(n)?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';
 function clpShort(n){ if(!isFinite(n))return'—'; const a=Math.abs(n), s=n<0?'-':'';
@@ -388,32 +367,38 @@ const FIX_DIN=`
 | DINC-2580960 | Cargo DHL | 2026-03-20 | AG Design SPA | Derechos aduana + IVA | - | - | 18.609 | AWB 3434315080 | La Mulata N77 | Si | Pago DHL import marzo |
 | 237983161 | DIN | 2026-03 | AG Design SPA | Importacion tela | s/d | s/d |  | AWB 3434315080 | La Mulata N77 | Si |  |`;
 const FIX_TASKS=[
+ {content:"[COCÓ] Regularizar patente comercial AG Design",priority:"p1",dueDate:"2026-06-19",checked:false,description:"Patentes provisorias caducaron en 2023; hay que rehacer desde cero. Decidir con el contador si cambiar domicilio SII a Vitacura y armar el pack de documentos."},
  {content:"[COCÓ] Cerrar empresa VEXA con contador",priority:"p1",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] Regularizar patente comercial AG Design",priority:"p1",dueDate:"2026-06-19",checked:false,description:"Patentes provisorias caducaron 2023. Decidir cambio de domicilio SII (Vitacura). Hablar con el contador."},
- {content:"[COCÓ] La Mulata (COT-007): pagar flete REM + cobrar saldo $3.176.999",priority:"p2",dueDate:"2026-07-08",checked:false,description:"En producción. Flete REM ya elegido ($1.240.701). Pagar flete + 50% Beztas; confirmar timing con Bilge; cobrar saldo al entregar."},
- {content:"[COCÓ] L'anima (COT-011): reunión mañana 9-jul 10:00 + cobrar saldo $333.100",priority:"p2",dueDate:"2026-07-09",checked:false,description:"Reunión confirmada jueves 9-jul 10:00 (Meet). Preparar avances de los 3 estampados; tras entrega, cobrar saldo."},
- {content:"[COCÓ] Roca and Co: buscar telas nuevas para mostrar (sigue prospecto)",priority:"p3",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] Responder a Fiona (JL-Silk) sobre seda viscosa estampada",priority:"p3",dueDate:"",checked:false,description:"JL-Silk confirmó dividir 100m en 5 diseños y pañuelos terminados. Decidir siguiente paso y responder."},
- {content:"[COCÓ] Lead pañuelos seda: cotizar 12 pañuelos estampados",priority:"p3",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] Brick London — estampado (Consuelo)",priority:"p3",dueDate:"",checked:false,description:""},
- {content:"[RUTINA] Revisar gastos marcados REVISAR + comprobante Dropbox",priority:"p3",dueDate:"2026-06-23",checked:false,description:""},
- {content:"[RUTINA] Registrar 2 facturas (Global 81 + Acepta.com)",priority:"p3",dueDate:"2026-06-30",checked:false,description:""},
- {content:"Pedir tarjeta de débito Santander (la actual está bloqueada)",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] La Mulata (COT-007): pagar flete REM, confirmar Bilge y cobrar saldo $3.176.999",priority:"p2",dueDate:"2026-07-08",checked:false,description:"En producción. Abono 70% recibido; saldo $3.176.999 contra entrega. Flete aéreo REM ($1.240.701) elegido: pagarlo con el 50% FOB restante, confirmar fecha con Bilge y cobrar al entregar."},
+ {content:"[COCÓ] L'anima (COT-011): reunión diseño 9-jul 10:00 + cobrar saldo $333.100",priority:"p2",dueDate:"2026-07-09",checked:false,description:"Abono $250.000 recibido; saldo $333.100 contra entrega. Reunión Meet hoy 9-jul 10:00: preparar avances de los 3 estampados y cobrar tras la entrega."},
+ {content:"[COCÓ] Reunión con Denise (Starbucks Luis Pasteur) — telas vestidos/blusas/conjuntos",priority:"p2",dueDate:"2026-07-08",checked:false,description:"Lead Denise busca telas para vestidos, blusas y conjuntos. Preparar opciones/muestras de tela."},
+ {content:"[COCÓ] Sienna (COT-005): cobrar saldo $192.700, pedir datos y emitir factura",priority:"p2",dueDate:"2026-07-31",checked:false,description:"Saldo $192.700 de Gonzalo Heresi. Pedir datos de facturación, confirmar pago y emitir factura. (Nota: el feedback indica que ya estaría pagado y facturado Nº81.)"},
+ {content:"[COCÓ] Sienna + Victoria Pey — actualizar tablero: sacar de 'por cobrar'",priority:"p2",dueDate:"",checked:false,description:"Feedback tablero (7-jul): Gonzalo (COT-005) ya pagado y facturado y Victoria Pey ya tiene boleta 52, pero siguen como 'por cobrar'. Confirmar y actualizar el maestro."},
+ {content:"[COCÓ] Brick London — estampado (diseño, Consuelo)",priority:"p3",dueDate:"",checked:false,description:""},
+ {content:"[RUTINA] Revisar gastos marcados REVISAR en Sheet + comprobante Dropbox",priority:"p3",dueDate:"2026-06-23",checked:false,description:"Decidir por cada gasto 'REVISAR' (webcam, mousepad, Midjourney, Uber, Rappi) si es del negocio con boleta/factura o se saca. Verificar el comprobante Dropbox Plus."},
+ {content:"[COCÓ] Lead pañuelos seda: cotizar 12 pañuelos de seda estampados",priority:"p3",dueDate:"",checked:false,description:"Lead web/WhatsApp (23-jun): diseño y confección de 12 pañuelos de seda estampados (envió patrón). Sin abono; responder cotización."},
+ {content:"[RUTINA] Registrar 2 facturas (Global 81 SPA Nº18113 + Acepta.com folio 1382560)",priority:"p3",dueDate:"2026-06-30",checked:false,description:"Dos facturas electrónicas a nombre de AG DESIGN SPA vía Acepta (26-jun). Confirmar montos/servicios y registrar en hoja Gastos si son del negocio."},
+ {content:"[COCÓ] Roca and Co: buscar telas NUEVAS para mostrar (prospecto)",priority:"p3",dueDate:"",checked:false,description:"Seguir el prospecto Roca and Co: buscar telas nuevas para mostrar."},
+ {content:"[COCÓ] Responder a Fiona (JL-Silk) sobre seda viscosa estampada",priority:"p3",dueDate:"",checked:false,description:"JL-Silk confirmó estampado custom en seda viscosa (100m divisibles en 5 diseños) y pañuelos terminados. Decidir siguiente paso (tela, muestras o pañuelos) y responder."},
+ {content:"[COCÓ] Revisar estado de cuenta Global66 (junio) y conciliar importación",priority:"p3",dueDate:"2026-07-10",checked:false,description:"Llegó el estado de cuenta Global66 01–30/06 (usada para pagos de importación FOB Beztas/La Mulata). Conciliar movimientos contra la hoja Gastos."},
+ {content:"[COCÓ] Boleta 51 (Outlet) del SII a Drive + ordenar Factura Nº71 Brick",priority:"p3",dueDate:"",checked:false,description:"Feedback tablero (7-jul): faltan boletas/facturas. Descargar boleta 51 (Outlet) del SII a Drive y mover/renombrar la Factura Nº71 Brick London a su carpeta, anclando los links en el maestro."},
  {content:"[COCÓ] Actualizar portafolio coz",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Buscar cursos de print online",priority:"p4",dueDate:"",checked:false,description:""},
+ {content:"[COCÓ] Planificar expansión ads: papel mural + papelería + otros textiles",priority:"p4",dueDate:"2026-07-26",checked:false,description:"Cuando el ad de textiles rinda bien, lanzar campañas B2B separadas por categoría (papel mural, papelería), midiendo ROI antes de escalar."},
  {content:"[COCÓ] Actualizar web con nuevo inicio",priority:"p4",dueDate:"",checked:false,description:""},
- {content:"[COCÓ] Planificar expansión ads (papel mural, papelería)",priority:"p4",dueDate:"2026-07-26",checked:false,description:""}
+ {content:"[COCÓ] Pedir tarjeta de débito Santander (la actual está bloqueada)",priority:"p4",dueDate:"",checked:false,description:""}
 ];
 const FIX_EVENTS=[
- {summary:"Reunión avances L'anima (Coco + Consuelo)",status:"confirmed",start:{dateTime:"2026-07-08T13:30:00-04:00"}},
- {summary:"Reunión Denise Yates · clienta telas · Vitacura",status:"confirmed",start:{dateTime:"2026-07-08T16:30:00-04:00"}},
  {summary:"Avances prints L'anima - Coz",status:"confirmed",start:{dateTime:"2026-07-09T10:00:00-04:00"}},
  {summary:"Reunión cowork Agustín · Vitacura",status:"confirmed",start:{dateTime:"2026-07-10T11:00:00-04:00"}},
  {summary:"Centro cultural España (paqui)",status:"confirmed",start:{dateTime:"2026-07-10T19:00:00-04:00"}},
  {summary:"Baby shower vale y pil",status:"confirmed",start:{dateTime:"2026-07-11T12:00:00-04:00"}},
  {summary:"Baby shower Lorenzo · casa Andreita",status:"confirmed",start:{dateTime:"2026-07-12T13:00:00-04:00"}},
- {summary:"Reunión Minísima - Coz · cierre",status:"confirmed",start:{dateTime:"2026-07-13T09:00:00-04:00"}},
+ {summary:"Reunión Minísima - Coz - cierre",status:"confirmed",start:{dateTime:"2026-07-13T09:00:00-04:00"}},
  {summary:"Hora Carolina Alessandri · Providencia",status:"confirmed",start:{dateTime:"2026-07-13T16:00:00-04:00"}},
- {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-15T10:00:00-04:00"}}
+ {summary:"🗑️ Sacar el reciclaje",status:"confirmed",start:{dateTime:"2026-07-15T10:00:00-04:00"}},
+ {summary:"Hora Carolina Alessandri · Providencia",status:"confirmed",start:{dateTime:"2026-07-20T16:00:00-04:00"}},
+ {summary:"Hora dr Gonzalo psiquiatra · Neveria",status:"confirmed",start:{dateTime:"2026-07-20T18:00:00-04:00"}}
 ];
 async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
@@ -465,14 +450,17 @@ async function loadInicio(){
   $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
 
   // INICIO — ventas desplegables (facturas) + promedios por tipo
-  const cotList=await getCotizaciones()||[];
+  const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
   let facturasHTML='', avgUtilDis=0, maxUtilImp=0;
-  {
-    const cobradas=cotList.filter(p=>(p.est||'').toLowerCase().includes('pagado'));
-    facturasHTML=cobradas.map(p=>`<div class="prow"><span class="pk">${esc(p.cli)} · ${esc(p.fac||'—')}</span><span class="pv">${clp(p.total)}</span></div>`).join('');
-    const dis=cotList.filter(p=>!/importacion|tela/i.test(p.srv||'')), imp=cotList.filter(p=>/importacion|tela/i.test(p.srv||''));
-    const uds=dis.map(p=>p.util).filter(x=>x>0); avgUtilDis=uds.length?uds.reduce((s,x)=>s+x,0)/uds.length:0;
-    maxUtilImp=Math.max(0,...imp.map(p=>p.util));
+  if(crows.length>1){
+    const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura')};
+    const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
+    const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
+    facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
+    const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
+    const uds=dis.map(r=>toNum(r[ci.util])).filter(x=>x>0); avgUtilDis=uds.length?uds.reduce((s,x)=>s+x,0)/uds.length:0;
+    maxUtilImp=Math.max(0,...imp.map(r=>toNum(r[ci.util])));
   }
   $('ventasDet').innerHTML=`<div id="vtoggle" style="text-align:center;font-size:12px;font-weight:800;color:var(--peri);padding:11px;cursor:pointer">▸ Ver las facturas del año</div><div id="vlist" class="card" style="display:none;margin-top:-4px">${facturasHTML||'<div class="state">Sin facturas.</div>'}</div>`;
   const vt=$('vtoggle'); if(vt) vt.onclick=()=>{const l=$('vlist'); const o=l.style.display==='none'; l.style.display=o?'block':'none'; vt.textContent=o?'▾ Ocultar facturas':'▸ Ver las facturas del año';};
@@ -588,9 +576,24 @@ function estadoInfo(est,srv){
   return {cls,lbl,group};
 }
 async function loadProyectos(){
-  const list=await getCotizaciones();
-  if(!list){ $('projList').innerHTML='<div class="state err">No pude leer la hoja de cotizaciones (revisa tu conexión).</div>'; return; }
-  PROJ=list.filter(p=>{ const e=(p.est||'').toLowerCase(); return p.cli && !(e.includes('pagado')||e.includes('pre-2026')||e.includes('pre 2026')||e.includes('sin respuesta')||e.includes('caido')||e.includes('caído')||e.includes('perdido')||e.includes('anulado')); });
+  const d=await call(T_DRIVE,{fileId:F_COT});
+  const md=d.fileContent||d.text;
+  if(d.__err||!md){ $('projList').innerHTML='<div class="state err">No pude leer la hoja de cotizaciones.</div>'; return; }
+  const rows=parseTable(md); if(!rows.length){$('projList').innerHTML='<div class="state">Sin datos.</div>';return;}
+  const head=rows[0].map(h=>h.toLowerCase()); const col=f=>head.findIndex(h=>h.includes(f));
+  const ci={id:col('id'),cli:col('cliente'),srv:col('servicio'),est:col('estado'),neto:col('monto neto'),
+    total:col('total c/iva'),factura:col('n factura'),abono:col('abono'),saldo:col('saldo'),
+    hon:col('honorario consuelo'),conpag:col('consuelo pagada'),util:col('utilidad'),alerta:col('alerta')};
+  PROJ=rows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin cot/i.test(r[ci.cli])).map(r=>{
+    const fac=(r[ci.factura]||'').trim(), abono=toNum(r[ci.abono]);
+    const facturado=(!fac||fac==='-'||/falta/i.test(fac)) ? ('No'+(abono>0?` · abono ${clp(abono)}`:'')) : ('Sí · '+fac);
+    let hon=(r[ci.hon]||'').trim(), consuelo='';
+    if(/n\/a/i.test(hon)) consuelo='No participa';
+    else if(hon && !/sin costo/i.test(hon) && hon!=='0'){ consuelo=hon; const pg=(r[ci.conpag]||'').trim(); if(pg&&pg!=='-'&&!/^revisar$/i.test(pg)) consuelo+=' · '+pg; }
+    return {id:r[ci.id]||'', cli:r[ci.cli]||'', srv:r[ci.srv]||'', est:r[ci.est]||'',
+      neto:toNum(r[ci.neto]), total:toNum(r[ci.total]), saldo:toNum(r[ci.saldo]), util:toNum(r[ci.util]),
+      facturado, consuelo, alerta:(r[ci.alerta]||'').replace(/^OK$/i,'')};
+  });
   const cats=['Todos','Diseño','Telas','Prospectos'];
   $('projChips').innerHTML=cats.map(e=>`<button class="chip ${e===projFilter?'on':''}" data-f="${e}">${e}</button>`).join('');
   $('projChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{projFilter=c.dataset.f;renderProj();});
@@ -721,7 +724,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 });
 
 async function refreshInicio(){ await loadInicio(); $('updated').textContent = window.__LIVE ? ('Actualizado '+new Date().toLocaleString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : 'Datos guardados (sin conexión)'; }
-function doRefresh(){ const f=$('fab'); if(f) f.classList.add('spin'); Promise.all([refreshInicio(), loadProyectos()]).finally(()=>{ if(f) f.classList.remove('spin'); }); }
+function doRefresh(){ const f=$('fab'); if(f) f.classList.add('spin'); const rb=$('refreshBtn'); if(rb) rb.textContent='Actualizando…'; refreshInicio().finally(()=>{ if(f) f.classList.remove('spin'); if(rb) rb.textContent='Actualizar'; }); }
 {const rb0=$('refreshBtn'); if(rb0) rb0.onclick=doRefresh;}
 $('fab').onclick=doRefresh;
 
