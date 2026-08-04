@@ -229,7 +229,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
     <h2>Lo que tengo hoy</h2>
     <div class="card"><div class="reschip"><span class="rl">En el banco</span><span class="rv" id="cajaHoyBig">—</span></div>
       <div class="oneline">Plata disponible en la cuenta ahora mismo.</div></div>
-    <h2>Este mes · julio</h2>
+    <h2 id="mesHdr">Este mes</h2>
     <div class="card" id="cajaMes"><div class="state">Cargando…</div></div>
     <h2>Hay que pagar</h2>
     <div class="card" id="cajaPagos"><div class="state">Cargando…</div></div>
@@ -299,6 +299,21 @@ function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   if(cur!==''||row.length){row.push(cur);rows.push(row);}
   return rows; }
 function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
+const COT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=292594745&single=true&output=csv";
+const TAREAS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=1136428408&single=true&output=csv";
+function csvToPipeN(text){ return parseCSV(text).filter(r=>r.some(c=>String(c||'').trim()!=='')).map(r=>'| '+r.map(c=>String(c||'').replace(/\|/g,' ').trim()).join(' | ')+' |').join('\n'); }
+let __TAREAS=null;
+async function loadTareas(){ if(__TAREAS) return __TAREAS;
+  try{ const r=await fetch(TAREAS_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0;
+    const rows=parseCSV(await r.text()); const tasks=[],events=[];
+    for(let i=1;i<rows.length;i++){ const c=rows[i]; if(!c||!(c[1]||'').trim()) continue;
+      const tipo=(c[0]||'').toLowerCase(), f=(c[3]||'').trim();
+      if(tipo.indexOf('evento')>=0){ events.push({summary:c[1],status:'confirmed',start: f.indexOf('T')>=0?{dateTime:f}:{date:f}}); }
+      else { tasks.push({content:c[1],priority:(c[2]||'p4').trim()||'p4',dueDate:f,checked:false,description:c[4]||''}); } }
+    if(!tasks.length && !events.length) throw 0;
+    __TAREAS={tasks,events};
+  }catch(e){ __TAREAS={tasks:FIX_TASKS,events:FIX_EVENTS}; }
+  return __TAREAS; }
 
 const clp=n=>isFinite(n)?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';
 function clpShort(n){ if(!isFinite(n))return'—'; const a=Math.abs(n), s=n<0?'-':'';
@@ -403,10 +418,10 @@ const FIX_EVENTS=[
 async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
     if(f===F_MAIN){ try{ const r=await fetch(LECTURA_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('VENTAS')) throw 0; window.__LIVE=true; return {fileContent:csvToPipe(t)}; }catch(e){ window.__LIVE=false; return {fileContent:FIX_MAIN}; } }
-    if(f===F_COT) return {fileContent:FIX_COT};
+    if(f===F_COT){ try{ const r=await fetch(COT_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!/cliente/i.test(t)) throw 0; return {fileContent:csvToPipeN(t)}; }catch(e){ return {fileContent:FIX_COT}; } }
     if(f===F_DIN) return {fileContent:FIX_DIN}; }
-  if(name===T_TODO) return {tasks:FIX_TASKS};
-  if(name===T_CAL) return {events:FIX_EVENTS};
+  if(name===T_TODO){ const d=await loadTareas(); return {tasks:d.tasks}; }
+  if(name===T_CAL){ const d=await loadTareas(); return {events:d.events}; }
   return {__err:'sin datos'};
 }
 function parseTable(md){
@@ -451,11 +466,14 @@ async function loadInicio(){
 
   // INICIO — ventas desplegables (facturas) + promedios por tipo
   const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
-  let facturasHTML='', avgUtilDis=0, maxUtilImp=0;
+  let facturasHTML='', avgUtilDis=0, maxUtilImp=0, porCobrarHTML='', porCobrarTotal=0;
   if(crows.length>1){
     const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
-    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura')};
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura'),saldo:c('saldo')};
     const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
+    const porc=rowsD.filter(r=>toNum(r[ci.saldo])>0);
+    porCobrarTotal=porc.reduce((s,r)=>s+toNum(r[ci.saldo]),0);
+    porCobrarHTML=porc.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
@@ -468,6 +486,7 @@ async function loadInicio(){
   // INICIO — meta hasta diciembre (en base a CAJA)
   const sueldoM=getSueldo(), gastosM=getGastosMes(), saleM=sueldoM+gastosM, mesesR=mesesRestantes()||5;
   const caja=proj, need=saleM*mesesR, falta=Math.max(0,need-caja), runwayM=saleM>0?caja/saleM:0;
+  const runwayPiso=saleM>0?cajaHoy/saleM:0;
   const coverM=need>0?Math.min(100,caja/need*100):0;
   const mesNom=['agosto','septiembre','octubre','noviembre','diciembre'], hasta=mesNom[Math.min(4,Math.floor(runwayM))];
   const nDis=avgUtilDis>0?Math.ceil(falta/avgUtilDis):0;
@@ -476,6 +495,7 @@ async function loadInicio(){
      <div class="metapct" style="color:var(--bad);margin:8px 0 2px">Faltan ${clpShort(falta)}</div>
      <div class="bar"><i style="width:${coverM.toFixed(0)}%;background:linear-gradient(90deg,#6f6fc9,#a6a6e6)"></i></div>
      <div class="legend"><span>Caja te alcanza ~${runwayM.toFixed(1).replace('.',',')} meses</span><span>Necesitas ${clpShort(need)}</span></div>
+     <div class="legend" style="margin-top:7px;border-top:1px dashed var(--line);padding-top:8px"><span>🔒 Piso (solo banco): <b>~${runwayPiso.toFixed(1).replace('.',',')} m</b></span><span>📈 Techo (si cobras todo): <b>~${runwayM.toFixed(1).replace('.',',')} m</b></span></div>
      <div class="oneline">Con la caja de hoy (${clpShort(caja)}, ya cobrando La Mulata) llegas <b>hasta ~${hasta}</b>. Para pagarte + gastos hasta diciembre y que sobre, tienes que <b>cerrar ~${clpShort(falta)}</b> de utilidad nueva — ≈ una importación grande tipo La Mulata (deja ~${clpShort(maxUtilImp)}) más un par de diseños, o del orden de <b>~${nDis} proyectos de diseño</b>.</div>
      <div style="background:var(--peri-soft);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:13px;color:var(--peri-ink);font-weight:800">Objetivo: cerrar 1 importación de ~${clpShort(falta/0.45)} neto (rango $8–10M) de aquí a diciembre.</div>`;
 
@@ -515,13 +535,14 @@ async function loadInicio(){
 
   // SUELDO/CAJA — hoy, este mes, pagos
   const pagos=between('por pagar julio','proyeccion fin de mes');
+  const MES=new Date().toLocaleDateString('es-CL',{month:'long'});
+  const mh=$('mesHdr'); if(mh) mh.textContent='Este mes · '+MES;
   $('cajaHoyBig').textContent=clp(cajaHoy);
   $('cajaMes').innerHTML=
     `<div class="wf">
       <div class="step"><span class="lab">En el banco hoy</span><span class="amt">${clp(cajaHoy)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar La Mulata</span><span class="amt pos">${clp(ctelas)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
-      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de julio</span><span class="amt neg">${clp(pagar)}</span></div>
+      ${porCobrarHTML||`<div class="step"><span class="lab">Sin cobros pendientes</span><span class="amt">—</span></div>`}
+      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de ${MES}</span><span class="amt neg">${clp(pagar)}</span></div>
       <div class="result"><span class="lab">Quedas a fin de mes</span><span class="amt">${clp(proj)}</span></div>
     </div>`;
   const pagosSorted=pagos.map(p=>[p[0],toNum(p[1])]).sort((a,b)=>b[1]-a[1]);
