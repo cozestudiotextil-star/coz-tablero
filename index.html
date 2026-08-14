@@ -229,7 +229,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
     <h2>Lo que tengo hoy</h2>
     <div class="card"><div class="reschip"><span class="rl">En el banco</span><span class="rv" id="cajaHoyBig">—</span></div>
       <div class="oneline">Plata disponible en la cuenta ahora mismo.</div></div>
-    <h2>Este mes · julio</h2>
+    <h2 id="mesHdr">Este mes</h2>
     <div class="card" id="cajaMes"><div class="state">Cargando…</div></div>
     <h2>Hay que pagar</h2>
     <div class="card" id="cajaPagos"><div class="state">Cargando…</div></div>
@@ -466,11 +466,14 @@ async function loadInicio(){
 
   // INICIO — ventas desplegables (facturas) + promedios por tipo
   const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
-  let facturasHTML='', avgUtilDis=0, maxUtilImp=0;
+  let facturasHTML='', avgUtilDis=0, maxUtilImp=0, porCobrarHTML='', porCobrarTotal=0;
   if(crows.length>1){
     const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
-    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura')};
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura'),saldo:c('saldo')};
     const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
+    const porc=rowsD.filter(r=>toNum(r[ci.saldo])>0);
+    porCobrarTotal=porc.reduce((s,r)=>s+toNum(r[ci.saldo]),0);
+    porCobrarHTML=porc.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
@@ -530,13 +533,14 @@ async function loadInicio(){
 
   // SUELDO/CAJA — hoy, este mes, pagos
   const pagos=between('por pagar','proyeccion fin de mes');
+  const MES=new Date().toLocaleDateString('es-CL',{month:'long'});
+  const mh=$('mesHdr'); if(mh) mh.textContent='Este mes · '+MES;
   $('cajaHoyBig').textContent=clp(cajaHoy);
   $('cajaMes').innerHTML=
     `<div class="wf">
       <div class="step"><span class="lab">En el banco hoy</span><span class="amt">${clp(cajaHoy)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar La Mulata</span><span class="amt pos">${clp(ctelas)}</span></div>
-      <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
-      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos del mes</span><span class="amt neg">${clp(pagar)}</span></div>
+      ${porCobrarHTML||`<div class="step"><span class="lab">Sin cobros pendientes</span><span class="amt">—</span></div>`}
+      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de ${MES}</span><span class="amt neg">${clp(pagar)}</span></div>
       <div class="result"><span class="lab">Quedas a fin de mes</span><span class="amt">${clp(proj)}</span></div>
     </div>`;
   const pagosSorted=pagos.map(p=>[p[0],toNum(p[1])]).sort((a,b)=>b[1]-a[1]);
