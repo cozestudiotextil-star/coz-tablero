@@ -293,6 +293,7 @@ const T_CAL="mcp__62296dc6-cfe8-4832-afe2-c03efbf3b4f2__list_events";
 const T_TODO="mcp__4209a9dd-0877-4cae-8998-197da33d196a__find-tasks";
 const LECTURA_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=594376880&single=true&output=csv";
 const COT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=292594745&single=true&output=csv";
+const TAREAS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=1136428408&single=true&output=csv";
 function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   for(let i=0;i<text.length;i++){ const c=text[i];
     if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
@@ -300,6 +301,19 @@ function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   if(cur!==''||row.length){row.push(cur);rows.push(row);}
   return rows; }
 function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
+function csvToPipeN(text){ return parseCSV(text).filter(r=>r.some(c=>String(c||'').trim()!=='')).map(r=>'| '+r.map(c=>String(c||'').replace(/\|/g,' ').trim()).join(' | ')+' |').join('\n'); }
+let __TAREAS=null;
+async function loadTareas(){ if(__TAREAS) return __TAREAS;
+  try{ const r=await fetch(TAREAS_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0;
+    const rows=parseCSV(await r.text()); const tasks=[],events=[];
+    for(let i=1;i<rows.length;i++){ const c=rows[i]; if(!c||!(c[1]||'').trim()) continue;
+      const tipo=(c[0]||'').toLowerCase(), f=(c[3]||'').trim();
+      if(tipo.indexOf('evento')>=0){ events.push({summary:c[1],status:'confirmed',start: f.indexOf('T')>=0?{dateTime:f}:{date:f}}); }
+      else { tasks.push({content:c[1],priority:(c[2]||'p4').trim()||'p4',dueDate:f,checked:false,description:c[4]||''}); } }
+    if(!tasks.length && !events.length) throw 0;
+    __TAREAS={tasks,events};
+  }catch(e){ __TAREAS={tasks:FIX_TASKS,events:FIX_EVENTS}; }
+  return __TAREAS; }
 
 const clp=n=>isFinite(n)?new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n):'—';
 function clpShort(n){ if(!isFinite(n))return'—'; const a=Math.abs(n), s=n<0?'-':'';
@@ -350,15 +364,15 @@ const FIX_MAIN=`
 | Tarjeta de credito | $265.463 |
 | Proyeccion fin de mes | $3.549.543 |`;
 const FIX_COT=`
-| ID | Cliente | Servicio | Estado pipeline | Cuenta en 2026 | Monto neto | IVA 19% | Total c/IVA | N factura | Abono recibido | Saldo por cobrar | Honorario Consuelo (bruto / liq) | Boleta Consuelo N | Consuelo pagada | Utilidad Coco | ALERTA / a confirmar |
-| COT-001 | Minisima | Diseno estampado | Pagado | No (arrastrado 2025) | 1078750 | 204963 | 1283713 | Orazem F°74 |  |  | revisar posible BHE 68 | 68? | revisar | 431500 | Confirmar honorario Consuelo || COT-003 | La Mulata | Importacion telas | Pagado | Si | 3483800 | 661922 | 4145722 | Un Toque F°77 | 1380358 | 0 (pagado) | n/a (telas) |  | n/a | 1145699 | OK |
-| COT-004 | Outlet / venta inmediata | Importacion telas (stock viejo) | Pagado | Si | 85336 | 16214 | 101550 | Boleta 51 |  | 0 (pagado) | n/a |  | n/a | 85336 | OK |
-| COT-005 | Gonzalo Heresi / Sienna | Diseno estampado | Abono hecho | Si | 440000 | 83600 | 523600 | FALTA factura saldo | 200000 | 323600 | 0 (Coco, sin costo) | - | n/a | 440000 | Entregado: falta cobrar saldo + emitir factura |
-| COT-007 | La Mulata | Importacion telas (jun-2026) | En produccion | Si | 8552100 | 1624899 | 10176999 | F°78 (solo abono) | 7000000 | 3176999 | n/a (telas) |  | n/a | 3852664 | Falta factura del saldo 30% al entregar; decidir flete Turquia-Chile |
-| COT-009 | Brick London | Diseno estampado (Proyecto C) | Pagado | No (arrastrado 2025) | 260800 | 49552 | 310352 | F°76 |  |  | 123091 / 104320 | 67 | Si | 156480 | Falta 1 estampado por enviar |
-| COT-006 | Victoria Pey | Importacion telas (sedas) | Prospecto | No (hasta pagar) | 6134454 | 1165546 | 7300000 | - |  | 7300000 | n/a |  | n/a | 2888000 | Emitir boleta $240.000 del abono; decidir pedido grande |
-| COT-010 | Roca and Co | Diseno + telas | Prospecto caido | No | 9500000 | 1805000 | 11305000 | - |  |  | s/d |  |  |  | Prospecto caido: el cliente sigue con su propio equipo |
-| COT-011 | Lanima | Diseno estampado | Abono hecho | Si | 490000 | 93100 | 583100 | FALTA factura | 250000 | 333100 | 245000 neto / 290035 bruto | s/n | revisar | 245000 | Falta cobrar saldo + factura |`;
+| ID | Cliente | Servicio | Estado pipeline | Cuenta en 2026 | Monto neto | IVA 19% | Total c/IVA | N factura | Abono recibido | Saldo por cobrar | Utilidad Coco | ALERTA / a confirmar |
+| COT-001 | Minisima | Diseno estampado | Pagado | No (arrastrado 2025) | 1078750 | 204963 | 1283713 | Orazem F°74 |  |  | 431500 | Confirmar honorario Consuelo |  | COT-003 | La Mulata | Importacion telas | Pagado | Si | 3483800 | 661922 | 4145722 | Un Toque F°77 | 1380358 | 0 (pagado) | n/a (telas) |  | n/a | 1145699 | OK |
+| COT-004 | Outlet / venta inmediata | Importacion telas (stock viejo) | Pagado | Si | 85336 | 16214 | 101550 | Boleta 51 |  | 0 (pagado) | 85336 | OK |
+| COT-005 | Gonzalo Heresi / Sienna | Diseno estampado | Abono hecho | Si | 440000 | 83600 | 523600 | FALTA factura saldo | 200000 | 323600 | 440000 | Entregado: falta cobrar saldo + emitir factura |
+| COT-007 | La Mulata | Importacion telas (jun-2026) | En produccion | Si | 8552100 | 1624899 | 10176999 | F°78 (solo abono) | 7000000 | 3176999 | 3852664 | Falta factura del saldo 30% al entregar; decidir flete Turquia-Chile |
+| COT-009 | Brick London | Diseno estampado (Proyecto C) | Pagado | No (arrastrado 2025) | 260800 | 49552 | 310352 | F°76 |  |  | 156480 | Falta 1 estampado por enviar |
+| COT-006 | Victoria Pey | Importacion telas (sedas) | Prospecto | No (hasta pagar) | 6134454 | 1165546 | 7300000 | - |  | 7300000 | 2888000 | Emitir boleta $240.000 del abono; decidir pedido grande |
+| COT-010 | Roca and Co | Diseno + telas | Prospecto caido | No | 9500000 | 1805000 | 11305000 | - |  |  |  | Prospecto caido: el cliente sigue con su propio equipo |
+| COT-011 | Lanima | Diseno estampado | Abono hecho | Si | 490000 | 93100 | 583100 | FALTA factura | 250000 | 333100 | 245000 | Falta cobrar saldo + factura |`;
 const FIX_DIN=`
 | N Doc | Tipo | Fecha | Importador | Mercancia | Cod Arancel | Valor CIF USD | Monto CLP | AWB / Ref | Pedido / Cliente | En Drive | Notas |
 | 801843421-1 | DIN FedEx | 2026-06-19 | AG Design SPA | Muestras seda mulberry | s/d | s/d |  |  | Victoria Pey COT-006 | Si | Ya corregido con proveedor |
@@ -404,10 +418,10 @@ const FIX_EVENTS=[
 async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
     if(f===F_MAIN){ try{ const r=await fetch(LECTURA_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('VENTAS')) throw 0; window.__LIVE=true; return {fileContent:csvToPipe(t)}; }catch(e){ window.__LIVE=false; return {fileContent:FIX_MAIN}; } }
-    if(f===F_COT){ try{ const r=await fetch(COT_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('COT-')) throw 0; return {fileContent:csvToPipe(t)}; }catch(e){ return {fileContent:FIX_COT}; } }
+    if(f===F_COT){ try{ const r=await fetch(COT_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('COT-')) throw 0; return {fileContent:csvToPipeN(t)}; }catch(e){ return {fileContent:FIX_COT}; } }
     if(f===F_DIN) return {fileContent:FIX_DIN}; }
-  if(name===T_TODO) return {tasks:FIX_TASKS};
-  if(name===T_CAL) return {events:FIX_EVENTS};
+  if(name===T_TODO){ const d=await loadTareas(); return {tasks:d.tasks}; }
+  if(name===T_CAL){ const d=await loadTareas(); return {events:d.events}; }
   return {__err:'sin datos'};
 }
 function parseTable(md){
