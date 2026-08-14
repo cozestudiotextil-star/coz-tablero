@@ -339,7 +339,7 @@ const FIX_MAIN=`
 | Caja hoy (banco CLP) | $4.496.302 |
 | Por cobrar telas (La Mulata) | $3.176.999 |
 | Por cobrar Lanima (contra entrega) | $333.100 |
-| Por pagar julio | $4.456.858 |
+| Por pagar agosto | $356.233 |
 | IVA junio (F-29, estimado) | $900.000 |
 | Beztas 50% FOB (telas) | $1.560.694 |
 | Flete REM (retiro ~10 jul) | $1.240.701 |
@@ -434,7 +434,7 @@ async function loadInicio(){
         pipe=toNum(g('pipeline prospectos')), prod=toNum(g('en produccion / abono')), gastos=toNum(g('gastos 2026 (neto)')),
         proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
   const telas=toNum(g('costo de telas')), imp=toNum(g('impuestos (iva')), oper=toNum(g('operaci'));
-  const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar julio'));
+  const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar'));
   VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
 
   // INICIO — panel de KPIs (normal)
@@ -472,7 +472,7 @@ async function loadInicio(){
   const mesNom=['agosto','septiembre','octubre','noviembre','diciembre'], hasta=mesNom[Math.min(4,Math.floor(runwayM))];
   const nDis=avgUtilDis>0?Math.ceil(falta/avgUtilDis):0;
   $('metaAnioCard').innerHTML=
-    `<div class="meta-top"><b>Pagarte + gastos hasta diciembre</b><span class="pk" style="font-size:11px">ago–dic · ${mesesR} meses</span></div>
+    `<div class="meta-top"><b>Pagarte + gastos hasta diciembre</b><span class="pk" style="font-size:11px">${mesActC()}–dic · ${mesesR} meses</span></div>
      <div class="metapct" style="color:var(--bad);margin:8px 0 2px">Faltan ${clpShort(falta)}</div>
      <div class="bar"><i style="width:${coverM.toFixed(0)}%;background:linear-gradient(90deg,#6f6fc9,#a6a6e6)"></i></div>
      <div class="legend"><span>Caja te alcanza ~${runwayM.toFixed(1).replace('.',',')} meses</span><span>Necesitas ${clpShort(need)}</span></div>
@@ -514,14 +514,14 @@ async function loadInicio(){
     `<div class="oneline">Esta es plata real (con IVA). Aquí está tu abono de <b>$7.000.000 de La Mulata</b>, dentro de "plata recibida".</div>`;
 
   // SUELDO/CAJA — hoy, este mes, pagos
-  const pagos=between('por pagar julio','proyeccion fin de mes');
+  const pagos=between('por pagar','proyeccion fin de mes');
   $('cajaHoyBig').textContent=clp(cajaHoy);
   $('cajaMes').innerHTML=
     `<div class="wf">
       <div class="step"><span class="lab">En el banco hoy</span><span class="amt">${clp(cajaHoy)}</span></div>
       <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar La Mulata</span><span class="amt pos">${clp(ctelas)}</span></div>
       <div class="step"><span class="lab"><span class="op plus">+</span>Cobrar L'anima</span><span class="amt pos">${clp(clanima)}</span></div>
-      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de julio</span><span class="amt neg">${clp(pagar)}</span></div>
+      <div class="step"><span class="lab"><span class="op minus">−</span>Pagos del mes</span><span class="amt neg">${clp(pagar)}</span></div>
       <div class="result"><span class="lab">Quedas a fin de mes</span><span class="amt">${clp(proj)}</span></div>
     </div>`;
   const pagosSorted=pagos.map(p=>[p[0],toNum(p[1])]).sort((a,b)=>b[1]-a[1]);
@@ -533,7 +533,11 @@ function row(k,v,cls){ return `<div class="lv ${cls==='tot'?'tot':''}"><span cla
 
 function getSueldo(){ return parseInt(localStorage.getItem('coz_sueldo')||'1000000',10); }
 function getGastosMes(){ return parseInt(localStorage.getItem('coz_gastos_mes')||'560000',10); }
-function mesesRestantes(){ const m=new Date().getMonth(); return Math.max(0, 12-Math.max(m,7)); } // agosto=7 → ago–dic
+function mesesRestantes(){ const m=new Date().getMonth(); return Math.max(0, 12-Math.max(m,7)); } // agosto=7 -> ago-dic
+const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES_C=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function mesAct(){ return MESES_L[Math.max(new Date().getMonth(),7)]; }
+function mesActC(){ return MESES_C[Math.max(new Date().getMonth(),7)]; }
 function renderMeta(){
   const sueldo=getSueldo(), gastos=getGastosMes(), sale=sueldo+gastos, caja=CAJAPROJ, meses=mesesRestantes();
   const runway=sale>0?caja/sale:0, need=sale*meses, falta=Math.max(0,need-caja);
@@ -545,7 +549,7 @@ function renderMeta(){
     const col = fill>0?'#4a4a86':'#b9b6c6';
     return `<div style="flex:1;text-align:center"><div style="height:40px;border-radius:9px;background:${bg};border:1px solid #e6e2f4"></div><div style="font-size:9px;font-weight:800;color:${col};margin-top:6px;letter-spacing:.08em">${mn}</div></div>`;
   }).join('');
-  $('metaLbl').textContent='Tu sueldo · desde agosto';
+  $('metaLbl').textContent='Tu sueldo · desde '+mesAct();
   $('metaBody').innerHTML=
     `<div class="metapct" style="color:${ok?'var(--ok)':'var(--peri-ink)'};margin-bottom:2px">Te alcanza ~${runway.toFixed(1).replace('.',',')} meses</div>`+
     `<div style="display:flex;gap:7px;margin:14px 0 6px">${blocks}</div>`+
