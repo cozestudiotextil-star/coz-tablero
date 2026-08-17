@@ -205,6 +205,8 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
 <main class="wrap">
   <!-- INICIO -->
   <section id="v-inicio" class="view active">
+    <h2>Pendientes de proyectos</h2>
+    <div class="card" id="pendProjCard"><div class="state">Cargando…</div></div>
     <h2>Resumen 2026</h2>
     <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
     <div id="ventasDet"></div>
@@ -287,6 +289,7 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
 const F_MAIN="11dVF6No7E-r0tLchmADGsWg-0VvbHvKpzVMmhV8huZ8";
 const F_COT="1caDM9Pyd5-wkkeRSJd-XDEoYWEpE1C7gjCjaeZxmKAA";
 const F_DIN="1VKH95x0hNM6RjuKK-eU4L3tOlij-VOlR-BVcqVH5-4Y";
+const DIN_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=37252877&single=true&output=csv";
 const COZ_PROJ="6gmqpM25vm5JpXwJ";
 const T_DRIVE="mcp__272cdf6e-d2ce-40f5-a345-5a44c714ba54__read_file_content";
 const T_CAL="mcp__62296dc6-cfe8-4832-afe2-c03efbf3b4f2__list_events";
@@ -419,7 +422,7 @@ async function call(name,args){
   if(name===T_DRIVE){ const f=args&&args.fileId;
     if(f===F_MAIN){ try{ const r=await fetch(LECTURA_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('VENTAS')) throw 0; window.__LIVE=true; return {fileContent:csvToPipe(t)}; }catch(e){ window.__LIVE=false; return {fileContent:FIX_MAIN}; } }
     if(f===F_COT){ try{ const r=await fetch(COT_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('COT-')) throw 0; return {fileContent:csvToPipeN(t)}; }catch(e){ return {fileContent:FIX_COT}; } }
-    if(f===F_DIN) return {fileContent:FIX_DIN}; }
+    if(f===F_DIN){ try{ const r=await fetch(DIN_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0; const t=await r.text(); if(!t||!t.includes('Documento')) throw 0; return {fileContent:csvToPipeN(t)}; }catch(e){ return {fileContent:FIX_DIN}; } } }
   if(name===T_TODO){ const d=await loadTareas(); return {tasks:d.tasks}; }
   if(name===T_CAL){ const d=await loadTareas(); return {events:d.events}; }
   return {__err:'sin datos'};
@@ -478,6 +481,11 @@ async function loadInicio(){
     porCobrarTotal=porcEste.reduce((s,r)=>s+toNum(r[ci.saldo]),0);
     porCobrarHTML=porcEste.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('')
       +porcFut.map(r=>`<div class="step" style="opacity:.42"><span class="lab">Cobrar ${esc(r[ci.cli])} \u00b7 m\u00e1s adelante</span><span class="amt">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
+    const pendIdx=c('pendiente');
+    const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>x.pend||x.saldo>0)
+      .sort((a,b)=>(b.saldo>0)-(a.saldo>0));
+    const pc=document.getElementById('pendProjCard');
+    if(pc) pc.innerHTML=pendItems.length?pendItems.map(x=>`<div class="todo p2"><div class="txt">${esc(x.cli)}${x.saldo>0?` · <span class="neg">${clp(x.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(x.pend||'—')}</div></div>`).join(''):'<div class="state">Sin pendientes 🎉</div>';
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
@@ -592,8 +600,7 @@ $('editMeta').onclick=()=>{ const v=prompt('¿Cuánto quieres sacar de sueldo al
 let PROJ=[], projFilter='Todos';
 function estadoInfo(est,srv){
   const e=(est||'').toLowerCase(), s=(srv||'').toLowerCase();
-  const group=(e.includes('prospecto')||e.includes('no cerrado')||e===''||e==='-') ? 'Prospectos'
-    : (s.includes('importacion')||s.includes('tela')) ? 'Telas' : 'Diseño';
+  const group=(e.includes('prospecto')||e.includes('no cerrado')||e.includes('respuesta')||e===''||e==='-') ? 'Prospectos' : 'Activos';
   let cls,lbl;
   if(e.includes('caido')||e.includes('caído')||e.includes('perdido')){cls='p-caido';lbl='Prospecto caído';}
   else if(e.includes('pagado')){cls='p-pagado';lbl='Pagado';}
@@ -611,7 +618,7 @@ async function loadProyectos(){
   const head=rows[0].map(h=>h.toLowerCase()); const col=f=>head.findIndex(h=>h.includes(f));
   const ci={id:col('id'),cli:col('cliente'),srv:col('servicio'),est:col('estado'),neto:col('monto neto'),
     total:col('total c/iva'),factura:col('n factura'),abono:col('abono'),saldo:col('saldo'),
-    hon:col('honorario consuelo'),conpag:col('consuelo pagada'),util:col('utilidad'),alerta:col('alerta')};
+    hon:col('honorario consuelo'),conpag:col('consuelo pagada'),util:col('utilidad'),alerta:col('alerta'),pend:col('pendiente')};
   PROJ=rows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin cot/i.test(r[ci.cli])).map(r=>{
     const fac=(r[ci.factura]||'').trim(), abono=toNum(r[ci.abono]);
     const facturado=(!fac||fac==='-'||/falta/i.test(fac)) ? ('No'+(abono>0?` · abono ${clp(abono)}`:'')) : ('Sí · '+fac);
@@ -620,9 +627,9 @@ async function loadProyectos(){
     else if(hon && !/sin costo/i.test(hon) && hon!=='0'){ consuelo=hon; const pg=(r[ci.conpag]||'').trim(); if(pg&&pg!=='-'&&!/^revisar$/i.test(pg)) consuelo+=' · '+pg; }
     return {id:r[ci.id]||'', cli:r[ci.cli]||'', srv:r[ci.srv]||'', est:r[ci.est]||'',
       neto:toNum(r[ci.neto]), total:toNum(r[ci.total]), saldo:toNum(r[ci.saldo]), util:toNum(r[ci.util]),
-      facturado, consuelo, alerta:(r[ci.alerta]||'').replace(/^OK$/i,'')};
+      facturado, consuelo, alerta:(r[ci.alerta]||'').replace(/^OK$/i,''), pend:(ci.pend>=0?(r[ci.pend]||''):'').trim()};
   });
-  const cats=['Todos','Diseño','Telas','Prospectos'];
+  const cats=['Todos','Con pendientes','Prospectos','Anteriores'];
   $('projChips').innerHTML=cats.map(e=>`<button class="chip ${e===projFilter?'on':''}" data-f="${e}">${e}</button>`).join('');
   $('projChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{projFilter=c.dataset.f;renderProj();});
   renderProj();
@@ -635,19 +642,24 @@ function projCard(p){
   rows.push(prow('Por cobrar', p.saldo>0?`<span class="neg">${clp(p.saldo)}</span>`:'<span class="pos">Pagado</span>'));
   if(p.consuelo) rows.push(prow('Consuelo', esc(p.consuelo)));
   rows.push(prow('Utilidad Coz', p.util>0?`<span class="pos">${clp(p.util)}</span>`:'Por definir'));
-  const falta=p.alerta&&!/^n\/a/i.test(p.alerta)?`<div class="falta"><b>Falta:</b> ${esc(p.alerta)}</div>`:'';
+  const bits=[]; if(p.pend) bits.push(`<b>Pendiente:</b> ${esc(p.pend)}`); if(p.alerta&&!/^n\/a/i.test(p.alerta)) bits.push(`<b>Falta:</b> ${esc(p.alerta)}`);
+  const falta=bits.length?`<div class="falta">${bits.join('<br>')}</div>`:'';
   return `<div class="proj"><div class="h"><div><div class="cli">${esc(p.cli)}</div><div class="srv">${p.id?esc(p.id)+' · ':''}${esc(p.srv)}</div></div><span class="pill ${info.cls}">${info.lbl}</span></div><div style="margin-top:9px">${rows.join('')}</div>${falta}</div>`;
 }
+function projGroup(p){
+  if(estadoInfo(p.est,p.srv).group==='Prospectos') return 'Prospectos';
+  return (p.pend||p.saldo>0) ? 'Con pendientes' : 'Anteriores';
+}
 function renderProj(){
-  const groups=['Diseño','Telas','Prospectos'];
-  const ord={'En producción':0,'En proceso':1,'Prospecto':2,'No cerrado':2,'Pagado':3};
+  const groups=['Con pendientes','Prospectos','Anteriores'];
+  const tit={'Con pendientes':'1 · En proceso o con pendientes','Prospectos':'2 · Prospectos / no cerrados','Anteriores':'3 · Proyectos anteriores'};
   let html='';
   groups.forEach(g=>{
     if(projFilter!=='Todos'&&projFilter!==g) return;
-    const list=PROJ.filter(p=>estadoInfo(p.est,p.srv).group===g)
-      .sort((a,b)=>(ord[estadoInfo(a.est,a.srv).lbl]??9)-(ord[estadoInfo(b.est,b.srv).lbl]??9)||b.neto-a.neto);
+    const list=PROJ.filter(p=>projGroup(p)===g)
+      .sort((a,b)=>(b.saldo>0)-(a.saldo>0)||b.neto-a.neto);
     if(!list.length) return;
-    html+=`<div class="grp">${g==='Prospectos'?'Prospectos / no cerrados':g}</div>`+list.map(projCard).join('');
+    html+=`<div class="grp">${tit[g]}</div>`+list.map(projCard).join('');
   });
   $('projList').innerHTML=html||'<div class="state">Nada por aquí.</div>';
 }
@@ -711,7 +723,8 @@ async function loadAgenda(){
   const d=await call(T_CAL,{startTime:now.toISOString(),endTime:end.toISOString(),pageSize:20,orderBy:'startTime'});
   if(d.__err){$('agendaCard').innerHTML='<div class="state err">No pude leer el calendario.</div>';}
   else{
-    const evs=(d.events||[]).filter(e=>e.status!=='cancelled');
+    const hoy=new Date(); hoy.setHours(0,0,0,0);
+    const evs=(d.events||[]).filter(e=>e.status!=='cancelled').filter(e=>{const dt=new Date(e.start.dateTime||e.start.date+'T23:59:00'); return dt>=hoy;}).sort((a,b)=>new Date(a.start.dateTime||a.start.date)-new Date(b.start.dateTime||b.start.date));
     if(!evs.length){$('agendaCard').innerHTML='<div class="state">Nada agendado esta semana.</div>';}
     else $('agendaCard').innerHTML=evs.map(e=>{
       const dt=new Date(e.start.dateTime||e.start.date+'T12:00:00'); const allday=!e.start.dateTime;
