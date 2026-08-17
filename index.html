@@ -482,7 +482,7 @@ async function loadInicio(){
     porCobrarHTML=porcEste.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('')
       +porcFut.map(r=>`<div class="step" style="opacity:.42"><span class="lab">Cobrar ${esc(r[ci.cli])} \u00b7 m\u00e1s adelante</span><span class="amt">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
     const pendIdx=c('pendiente');
-    const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>x.pend||x.saldo>0)
+    const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>(x.pend||x.saldo>0)&&!/respuesta|ca\u00eddo|caido/i.test(x.est))
       .sort((a,b)=>(b.saldo>0)-(a.saldo>0));
     const pc=document.getElementById('pendProjCard');
     if(pc) pc.innerHTML=pendItems.length?pendItems.map(x=>`<div class="todo p2"><div class="txt">${esc(x.cli)}${x.saldo>0?` · <span class="neg">${clp(x.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(x.pend||'—')}</div></div>`).join(''):'<div class="state">Sin pendientes 🎉</div>';
@@ -619,7 +619,7 @@ async function loadProyectos(){
   const ci={id:col('id'),cli:col('cliente'),srv:col('servicio'),est:col('estado'),neto:col('monto neto'),
     total:col('total c/iva'),factura:col('n factura'),abono:col('abono'),saldo:col('saldo'),
     hon:col('honorario consuelo'),conpag:col('consuelo pagada'),util:col('utilidad'),alerta:col('alerta'),pend:col('pendiente')};
-  PROJ=rows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin cot/i.test(r[ci.cli])).map(r=>{
+  PROJ=rows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin cot/i.test(r[ci.cli])&&!/respuesta|ca\u00eddo|caido/i.test(r[ci.est]||'')).map(r=>{
     const fac=(r[ci.factura]||'').trim(), abono=toNum(r[ci.abono]);
     const facturado=(!fac||fac==='-'||/falta/i.test(fac)) ? ('No'+(abono>0?` · abono ${clp(abono)}`:'')) : ('Sí · '+fac);
     let hon=(r[ci.hon]||'').trim(), consuelo='';
