@@ -293,7 +293,7 @@ const T_CAL="mcp__62296dc6-cfe8-4832-afe2-c03efbf3b4f2__list_events";
 const T_TODO="mcp__4209a9dd-0877-4cae-8998-197da33d196a__find-tasks";
 const LECTURA_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=594376880&single=true&output=csv";
 const COT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=292594745&single=true&output=csv";
-const TAREAS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTRH0tqs3J8foJa7-YgkEKHC8_3KvKvFl5O94V4Efs6-yqzWd8vVPisdAbF1m7aVxTyv66rrSIDP_zc/pub?gid=1136428408&single=true&output=csv";
+const TAREAS_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vSWmC4wjie6p-owUvG0hPReZYJ0lnTgd-dEkgd0nyggT0t-GQqiMjLgJauOXfwNg8Gv-NP6A8qM0GvR/pub?gid=1863788751&single=true&output=csv";
 function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   for(let i=0;i<text.length;i++){ const c=text[i];
     if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
@@ -449,7 +449,7 @@ async function loadInicio(){
         pipe=toNum(g('pipeline prospectos')), prod=toNum(g('en produccion / abono')), gastos=toNum(g('gastos 2026 (neto)')),
         proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
   const telas=toNum(g('costo de telas')), imp=toNum(g('impuestos (iva')), oper=toNum(g('operaci'));
-  const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar'));
+  const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar')), sueldoMes=toNum(g('sueldo pendiente'));
   VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
 
   // INICIO — panel de KPIs (normal)
@@ -469,11 +469,15 @@ async function loadInicio(){
   let facturasHTML='', avgUtilDis=0, maxUtilImp=0, porCobrarHTML='', porCobrarTotal=0;
   if(crows.length>1){
     const h=crows[0].map(x=>x.toLowerCase()); const c=f=>h.findIndex(x=>x.includes(f));
-    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura'),saldo:c('saldo')};
+    const ci={cli:c('cliente'),srv:c('servicio'),est:c('estado'),total:c('total c/iva'),util:c('utilidad'),fac:c('n factura'),saldo:c('saldo'),cobro:c('fecha cobro')};
     const rowsD=crows.slice(1).filter(r=>r[ci.cli]&&r[ci.cli]!=='NOTA'&&!/^\(sin/i.test(r[ci.cli]));
     const porc=rowsD.filter(r=>toNum(r[ci.saldo])>0);
-    porCobrarTotal=porc.reduce((s,r)=>s+toNum(r[ci.saldo]),0);
-    porCobrarHTML=porc.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
+    const _eom=(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0);})();
+    const _fut=r=>{const m=String(r[ci.cobro]||'').trim().match(/^(\d{4})-(\d{2})-(\d{2})/); return m?new Date(+m[1],+m[2]-1,+m[3])>_eom:false;};
+    const porcEste=porc.filter(r=>!_fut(r)), porcFut=porc.filter(_fut);
+    porCobrarTotal=porcEste.reduce((s,r)=>s+toNum(r[ci.saldo]),0);
+    porCobrarHTML=porcEste.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('')
+      +porcFut.map(r=>`<div class="step" style="opacity:.42"><span class="lab">Cobrar ${esc(r[ci.cli])} \u00b7 m\u00e1s adelante</span><span class="amt">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
@@ -541,6 +545,7 @@ async function loadInicio(){
       <div class="step"><span class="lab">En el banco hoy</span><span class="amt">${clp(cajaHoy)}</span></div>
       ${porCobrarHTML||`<div class="step"><span class="lab">Sin cobros pendientes</span><span class="amt">—</span></div>`}
       <div class="step"><span class="lab"><span class="op minus">−</span>Pagos de ${MES}</span><span class="amt neg">${clp(pagar)}</span></div>
+      ${sueldoMes>0?`<div class="step"><span class="lab"><span class="op minus">−</span>Tu sueldo del mes</span><span class="amt neg">${clp(sueldoMes)}</span></div>`:''}
       <div class="result"><span class="lab">Quedas a fin de mes</span><span class="amt">${clp(proj)}</span></div>
     </div>`;
   const pagosSorted=pagos.map(p=>[p[0],toNum(p[1])]).sort((a,b)=>b[1]-a[1]);
