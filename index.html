@@ -10,10 +10,11 @@
 <meta name="theme-color" content="#6f6fc9">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme: light;
-  --bg:#ffffff; --panel:#faf9ff; --card:#ffffff; --ink:#23222c; --muted:#8b8896; --line:#e9e8f4;
+  --bg:#ffffff; --panel:#faf9ff; --card:#ffffff; --ink:#1e1e1e; --muted:#8e8e8b; --line:#e4e2ec;
   --peri:#6f6fc9; --peri-soft:#edecfb; --peri-ink:#4a4a86;
   --ok:#3f7a54; --okbg:#eaf3ec; --warn:#b57d1c; --warnbg:#fbf1dc; --bad:#bd4a34; --badbg:#fbeae6; --info:#5566b0; --infobg:#eceff9;
   --shadow:0 1px 2px rgba(70,70,120,.05), 0 6px 22px rgba(70,70,120,.06);
@@ -21,17 +22,17 @@
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{background:var(--bg); color:var(--ink);
-  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Georgia,serif; padding-bottom:70px;}
+  font:15px/1.5 'Instrument Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding-bottom:70px;}
 .wrap{max-width:520px; margin:0 auto; padding:0 15px}
 header{position:sticky; top:0; z-index:20; background:rgba(255,255,255,.94);
   backdrop-filter:saturate(180%) blur(10px); border-bottom:1px solid var(--line); padding:15px 0 11px;}
 header .wrap{display:flex; align-items:baseline; justify-content:space-between}
-.brand{font-weight:800; letter-spacing:.2em; font-size:14px}
+.brand{font-weight:800; letter-spacing:.24em; font-size:13.5px}
 .brand small{color:var(--peri); font-weight:800}
 .sub{font-size:11px; color:var(--muted); margin-top:3px; letter-spacing:.04em}
 .updated{font-size:10px; color:var(--muted); text-align:right}
-h2{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--peri-ink);
-  background:var(--peri-soft); border-radius:8px; padding:7px 11px; margin:22px 0 11px; font-weight:800}
+h2{font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; color:#9b9bc4;
+  background:none; border-radius:0; padding:0 1px 7px; margin:26px 0 10px; font-weight:700; border-bottom:1px solid var(--line)}
 .card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:15px; margin-bottom:12px}
 .view{display:none}
 .view.active{display:block; animation:fade .22s ease}
