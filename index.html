@@ -498,8 +498,8 @@ async function loadInicio(){
 
   // INICIO — meta hasta diciembre (en base a CAJA)
   const sueldoM=getSueldo(), gastosM=getGastosMes(), saleM=sueldoM+gastosM, mesesR=mesesRestantes()||5;
-  const caja=proj, need=saleM*mesesR, falta=Math.max(0,need-caja), runwayM=saleM>0?caja/saleM:0;
-  const coverM=need>0?Math.min(100,caja/need*100):0;
+  const caja=proj, need=saleM*mesesR, cubierto=caja+utilReal, falta=Math.max(0,need-cubierto), runwayM=saleM>0?caja/saleM:0;
+  const coverM=need>0?Math.min(100,cubierto/need*100):0;
   const mesNom=['agosto','septiembre','octubre','noviembre','diciembre'], hasta=mesNom[Math.min(4,Math.floor(runwayM))];
   const nDis=avgUtilDis>0?Math.ceil(falta/avgUtilDis):0;
   $('metaAnioCard').innerHTML=
@@ -507,8 +507,8 @@ async function loadInicio(){
      <div class="metapct" style="color:var(--bad);margin:8px 0 2px">Faltan ${clpShort(falta)}</div>
      <div class="bar"><i style="width:${coverM.toFixed(0)}%;background:linear-gradient(90deg,#6f6fc9,#a6a6e6)"></i></div>
      <div class="legend"><span>Caja te alcanza ~${runwayM.toFixed(1).replace('.',',')} meses</span><span>Necesitas ${clpShort(need)}</span></div>
-     <div class="oneline">Con la caja de hoy (${clpShort(caja)}, ya cobrando La Mulata) llegas <b>hasta ~${hasta}</b>. Para pagarte + gastos hasta diciembre y que sobre, tienes que <b>cerrar ~${clpShort(falta)}</b> de utilidad nueva — ≈ una importación grande tipo La Mulata (deja ~${clpShort(maxUtilImp)}) más un par de diseños, o del orden de <b>~${nDis} proyectos de diseño</b>.</div>
-     <div style="background:var(--peri-soft);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:13px;color:var(--peri-ink);font-weight:800">Objetivo: cerrar 1 importación de ~${clpShort(falta/0.45)} neto (rango $8–10M) de aquí a diciembre.</div>`;
+     <div class="oneline">Caja de hoy <b>${clpShort(caja)}</b> + utilidad que ya viene de los proyectos <b>en producción</b> ${clpShort(utilReal)}. Para pagarte + gastos hasta diciembre falta <b>cerrar ~${clpShort(falta)}</b> de utilidad en proyectos nuevos — ≈ una importación tipo La Mulata (deja ~${clpShort(maxUtilImp)}) o <b>~${nDis} proyectos de diseño</b>.</div>
+     <div style="background:var(--peri-soft);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:13px;color:var(--peri-ink);font-weight:800">Objetivo: cerrar ventas nuevas por ~${clpShort(falta/0.45)} neto de aquí a diciembre (la utilidad de lo ya confirmado ya está contada).</div>`;
 
   // INICIO — barra apilada de gastos por categoría
   const gtot=telas+imp+oper||1;
