@@ -636,10 +636,11 @@ async function loadProyectos(){
 }
 function prow(k,v){return `<div class="prow"><span class="pk">${k}</span><span class="pv">${v}</span></div>`;}
 function projCard(p){
-  const info=estadoInfo(p.est,p.srv), rows=[];
-  rows.push(prow('Total c/IVA', p.total>0?clp(p.total):(p.neto>0?clp(p.neto)+' <span class="pk">(neto)</span>':'—')));
-  rows.push(prow('Facturado', esc(p.facturado)));
-  rows.push(prow('Por cobrar', p.saldo>0?`<span class="neg">${clp(p.saldo)}</span>`:'<span class="pos">Pagado</span>'));
+  const info=estadoInfo(p.est,p.srv), rows=[], esProspecto=info.group==='Prospectos';
+  rows.push(prow(esProspecto?'Cotizado c/IVA':'Total c/IVA', p.total>0?clp(p.total):(p.neto>0?clp(p.neto)+' <span class="pk">(neto)</span>':'—')));
+  if(!esProspecto) rows.push(prow('Facturado', esc(p.facturado)));
+  if(!esProspecto) rows.push(prow('Por cobrar', p.saldo>0?`<span class="neg">${clp(p.saldo)}</span>`:'<span class="pos">Pagado</span>'));
+  if(esProspecto) rows.push(prow('Estado', 'Sin abono aún — se confirma al recibirlo'));
   if(p.consuelo) rows.push(prow('Consuelo', esc(p.consuelo)));
   rows.push(prow('Utilidad Coz', p.util>0?`<span class="pos">${clp(p.util)}</span>`:'Por definir'));
   const bits=[]; if(p.pend) bits.push(`<b>Pendiente:</b> ${esc(p.pend)}`); if(p.alerta&&!/^n\/a/i.test(p.alerta)) bits.push(`<b>Falta:</b> ${esc(p.alerta)}`);
