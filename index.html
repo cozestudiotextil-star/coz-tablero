@@ -20,6 +20,8 @@
   --shadow:0 1px 2px rgba(70,70,120,.05), 0 6px 22px rgba(70,70,120,.06);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+textarea,input,button,select{font-family:inherit}
+.kpi .v,.metapct,.amt,.pv,.val,.rv,.am,.hv{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; letter-spacing:-.01em}
 html,body{margin:0}
 body{background:var(--bg); color:var(--ink);
   font:15px/1.5 'Instrument Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding-bottom:70px;}
@@ -565,7 +567,8 @@ async function loadInicio(){
 function row(k,v,cls){ return `<div class="lv ${cls==='tot'?'tot':''}"><span class="k">${esc(k)}</span><span class="val">${v}</span></div>`; }
 
 function getSueldo(){ return parseInt(localStorage.getItem('coz_sueldo')||'1000000',10); }
-function getGastosMes(){ return parseInt(localStorage.getItem('coz_gastos_mes')||'560000',10); }
+if(localStorage.getItem('coz_gastos_mes')==='560000') localStorage.removeItem('coz_gastos_mes');
+function getGastosMes(){ return parseInt(localStorage.getItem('coz_gastos_mes')||'600000',10); }
 function mesesRestantes(){ const m=new Date().getMonth(); return Math.max(0, 12-Math.max(m,7)); } // agosto=7 -> ago-dic
 const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MESES_C=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
