@@ -210,6 +210,8 @@ nav button.on::after{content:""; position:absolute; left:50%; bottom:-1px; trans
   <section id="v-inicio" class="view active">
     <h2>Pendientes de proyectos</h2>
     <div class="card" id="pendProjCard"><div class="state">Cargando…</div></div>
+    <h2>Cómo vamos vs. 2025</h2>
+    <div class="card" id="vs25Card"><div class="state">Cargando…</div></div>
     <h2>Resumen 2026</h2>
     <div class="kpis" id="kpis"><div class="state">Cargando números…</div></div>
     <div id="ventasDet"></div>
@@ -442,7 +444,8 @@ let VENTAS=0, UTIL=0, UTILREAL=0, CAJAPROJ=0;
 async function loadInicio(){
   const d=await call(T_DRIVE,{fileId:F_MAIN});
   const md=d.fileContent||d.text;
-  if(d.__err||!md){ $('kpis').innerHTML='<div class="state err" style="grid-column:1/3">No pude leer el maestro. Toca Actualizar.</div>'; return; }
+  if(d.__err||!md){ $('kpis').innerHTML='<div class="state err" style="grid-column:1/3">No pude leer el maestro. Toca Actualizar.</div>';
+    if($('vs25Card')) $('vs25Card').innerHTML='<div class="state err">No pude leer el maestro. Toca Actualizar.</div>'; return; }
   const rows=parseTable(md);
   const L=rows.filter(r=>r[0]).map(r=>[r[0], r[1]!==undefined?r[1]:'']);
   const map={}; L.forEach(r=>{ if(r[1]!=='') map[r[0].toLowerCase()]=r[1]; });
@@ -458,6 +461,13 @@ async function loadInicio(){
   const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar')), sueldoMes=toNum(g('sueldo pendiente'));
   VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
 
+  // 2025 — para comparar. Sale de la hoja LECTURA si existe una fila que empiece con "VENTAS ... 2025".
+  // Si la hoja no lo trae, se usa el valor que Cocó guardo a mano en el celular (boton Ingresar).
+  const k25=Object.keys(map).filter(k=>/^ventas?\b/.test(k)&&k.includes('2025'));
+  const kY25=k25.find(k=>/misma fecha|mismo per|a la fecha|a esta fecha|acumulad|ytd/.test(k));
+  const kT25=k25.find(k=>k!==kY25);
+  const kU25=Object.keys(map).find(k=>/^utilidad/.test(k)&&k.includes('2025'));
+
   // INICIO — panel de KPIs (normal)
   const ventasTotal=ventas+prod;
   const K=[
@@ -469,6 +479,11 @@ async function loadInicio(){
     ['Pipeline', clp(pipe), 'posible · prospectos', 'wide'],
   ];
   $('kpis').innerHTML=K.map(k=>`<div class="kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="n">${k[2]}</div></div>`).join('');
+
+  // INICIO — comparacion con el año pasado (arriba del resumen)
+  renderVs25({hoy:ventasTotal, cobrado:ventas, prod:prod, util26:util,
+              sheetT:kT25?toNum(map[kT25]):0, sheetY:kY25?toNum(map[kY25]):0,
+              u25:kU25?toNum(map[kU25]):0});
 
   // INICIO — ventas desplegables (facturas) + promedios por tipo
   const dcot=await call(T_DRIVE,{fileId:F_COT}); const crows=parseTable(dcot.fileContent||dcot.text||'');
@@ -563,6 +578,91 @@ async function loadInicio(){
   $('cajaPagos').innerHTML=
     pagosSorted.map(p=>`<div class="lv"><span class="k">${esc(p[0])}</span><span class="val neg">${clp(p[1])}</span></div>`).join('')+
     `<div class="lv tot"><span class="k">Total a pagar</span><span class="val">${clp(pagar)}</span></div>`;
+}
+/* ---------- INICIO — VENTAS 2026 vs 2025 ---------- */
+let VS25={hoy:0,cobrado:0,prod:0,util26:0,sheetT:0,sheetY:0,u25:0};
+function getV25(k){ return parseInt(localStorage.getItem('coz_v2025_'+k)||'0',10)||0; }
+function fracAno(){ const n=new Date(), y=n.getFullYear();
+  const doy=Math.floor((n-new Date(y,0,1))/864e5)+1;
+  const diy=((y%4===0&&y%100!==0)||y%400===0)?366:365;
+  return Math.min(1,doy/diy); }
+function editV25(){
+  const c=VS25;                        // lo que ya viene de la hoja no se pregunta: la hoja manda
+  if(!c.sheetT){
+    const a=prompt('¿Cuánto vendiste en TODO 2025? (neto, sin IVA)', getV25('total')||'');
+    if(a===null) return;
+    const na=toNum(a); localStorage.setItem('coz_v2025_total', na>0?na:0);
+  }
+  if(!c.sheetY){
+    const b=prompt('¿Y cuánto llevabas vendido a esta misma altura de 2025? (neto — deja 0 si no lo sabes)', getV25('ytd')||'');
+    if(b!==null){ const nb=toNum(b); localStorage.setItem('coz_v2025_ytd', nb>0?nb:0); }
+  }
+  renderVs25();
+}
+function renderVs25(ctx){
+  if(ctx) VS25=ctx;
+  const c=VS25, el=$('vs25Card'); if(!el) return;
+  const v25=c.sheetT||getV25('total'), v25ytd=c.sheetY||getV25('ytd');
+  const enHoja=!!(c.sheetT&&c.sheetY);                   // todo el 2025 sale del maestro
+  const aMano=(!c.sheetT&&v25>0)||(!c.sheetY&&v25ytd>0);  // algo lo escribio ella en el telefono
+  const top=`<div class="meta-top"><b>Ventas 2026 vs 2025</b>`+
+    (enHoja?`<span class="pk" style="font-size:11px">desde la hoja</span>`:`<button class="mini" id="editV25">${(v25||v25ytd)?'Editar':'Ingresar'}</button>`)+`</div>`;
+
+  if(!v25 && !v25ytd){
+    el.innerHTML=top+
+      `<div class="oneline" style="margin-top:2px">Todavía no tengo cuánto vendiste el año pasado. Toca <b>Ingresar</b> y escríbelo, o agrégalo al maestro: en la hoja <b>LECTURA</b> una fila <b>VENTAS 2025 (neto)</b> con el monto (y, si la tienes, otra fila <b>VENTAS 2025 a la misma fecha (neto)</b> para comparar contra el mismo punto del año). Apenas esté, esta tarjeta se llena sola.</div>`;
+    const b=$('editV25'); if(b) b.onclick=editV25;
+    return;
+  }
+
+  // Si tenemos el dato "a la misma fecha", comparamos manzanas con manzanas (hoy vs hoy).
+  // Si solo tenemos el año 2025 cerrado, el titular compara AÑO CONTRA AÑO: la proyeccion de 2026 vs 2025.
+  const proy=c.hoy/(fracAno()||1);
+  const ytdMode=v25ytd>0;
+  const dif=ytdMode?(c.hoy-v25ytd):(proy-v25);
+  const pct=ytdMode?(v25ytd>0?dif/v25ytd*100:0):(v25>0?dif/v25*100:0);
+  const up=dif>=0;
+  const chipLbl=ytdMode?(up?'Vas mejor que 2025':'Vas bajo 2025'):(up?'Cierras el año sobre 2025':'Cierras el año bajo 2025');
+  const chipSub=ytdMode?'contra la misma fecha del año pasado':'al ritmo que llevas hoy';
+  const maxv=Math.max(c.hoy,v25,v25ytd,1);
+  const bar=(lab,sub,val,col)=>`
+    <div style="margin-top:13px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:5px">
+        <span style="font-size:11.5px;color:var(--muted);font-weight:700">${lab}${sub?` · <span style="font-weight:600">${sub}</span>`:''}</span>
+        <span style="font-size:13.5px;font-weight:800;white-space:nowrap">${clp(val)}</span>
+      </div>
+      <div class="mestrack"><i style="width:${(val/maxv*100).toFixed(1)}%;background:${col}"></i></div>
+    </div>`;
+  let bars='';
+  if(v25ytd) bars+=bar('2025 a esta fecha','', v25ytd,'#b9b9dd');
+  bars+=bar('2026 a hoy','cobrado + en producción', c.hoy,'#6f6fc9');
+  if(v25) bars+=bar('2025 completo','año cerrado', v25,'#dcdcf6');
+
+  const pctAno=v25>0?c.hoy/v25*100:0;
+  const proyPct=v25>0?proy/v25*100-100:0;
+
+  const utilHTML=(c.u25>0)?
+    `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:4px">
+       <div class="prow"><span class="pk">Utilidad 2025</span><span class="pv">${clp(c.u25)}</span></div>
+       <div class="prow"><span class="pk">Utilidad 2026 ya ganada</span><span class="pv ${c.util26>=c.u25?'pos':''}">${clp(c.util26)}</span></div>
+     </div>`:'';
+
+  el.innerHTML=top+
+    `<div class="reschip ${up?'':'neg'}" style="margin-top:11px">
+       <span class="rl">${chipLbl}<span style="display:block;font-size:10.5px;font-weight:700;opacity:.72;margin-top:2px">${chipSub}</span></span>
+       <span class="rv">${up?'+':'−'}${Math.abs(pct).toFixed(0)}%</span>
+     </div>`+
+    bars+utilHTML+
+    (ytdMode
+      ? `<div class="oneline">Llevas <b>${clpShort(c.hoy)}</b> vendidos en 2026: <b>${clpShort(Math.abs(dif))} ${up?'más':'menos'}</b> que a esta misma fecha de 2025.`+
+        (v25>0?` Vas en el <b>${pctAno.toFixed(0)}%</b> de todo 2025 y todavía quedan ${mesActC()}–dic.`:'')+
+        ` A este ritmo cerrarías el año en <b>${clpShort(proy)}</b>`+
+        (v25>0?` (${proyPct>=0?'+':'−'}${Math.abs(proyPct).toFixed(0)}% vs 2025)`:'')+`.</div>`
+      : `<div class="oneline">Llevas <b>${clpShort(c.hoy)}</b> vendidos en 2026 — el <b>${pctAno.toFixed(0)}%</b> de todo lo que vendiste en 2025, y todavía quedan ${mesActC()}–dic. A este ritmo cerrarías el año en <b>${clpShort(proy)}</b>, <b>${clpShort(Math.abs(dif))} ${up?'más':'menos'}</b> que 2025.</div>`)+
+    (ytdMode?'':`<div class="note">Como solo tengo el <b>2025 cerrado</b>, el % de arriba compara año contra año (tu proyección de 2026 vs 2025). Para ver hoy contra hoy, toca <b>Editar</b> y pon cuánto llevabas vendido a esta altura del año pasado — o agrega esa fila al maestro como <b>VENTAS 2025 a la misma fecha (neto)</b>.</div>`)+
+    (aMano?`<div class="note">Ese número de 2025 lo escribiste a mano en este teléfono. Si lo pones en la hoja LECTURA como <b>${(!c.sheetT&&v25>0)?'VENTAS 2025 (neto)':'VENTAS 2025 a la misma fecha (neto)'}</b>, lo lee solo y te sigue en cualquier dispositivo.</div>`:'');
+
+  const b=$('editV25'); if(b) b.onclick=editV25;
 }
 function row(k,v,cls){ return `<div class="lv ${cls==='tot'?'tot':''}"><span class="k">${esc(k)}</span><span class="val">${v}</span></div>`; }
 
