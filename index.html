@@ -138,6 +138,8 @@ h2{font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; color:#9b9bc
 .prow:last-of-type{border-bottom:0}
 .prow .pk{color:var(--muted); flex:1 1 auto; min-width:0; overflow-wrap:anywhere} .prow .pv{font-weight:700; text-align:right; flex:0 0 auto; white-space:nowrap}
 .falta{margin-top:10px; font-size:11.5px; color:var(--bad); line-height:1.42}
+.clamp{display:-webkit-box!important; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+.vermas{font-size:10.5px; font-weight:800; color:var(--peri); margin-top:5px; cursor:pointer; letter-spacing:.04em}
 .falta b{color:var(--bad); font-weight:800}
 .p-proceso{background:var(--warnbg); color:var(--warn)}
 
@@ -308,6 +310,11 @@ function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   return rows; }
 function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
 function csvToPipeN(text){ return parseCSV(text).filter(r=>r.some(c=>String(c||'').trim()!=='')).map(r=>'| '+r.map(c=>String(c||'').replace(/\|/g,' ').trim()).join(' | ')+' |').join('\n'); }
+function clampify(el){ if(!el) return; el.querySelectorAll('.desc,.falta').forEach(d=>{ if(d.dataset.cl) return; d.dataset.cl='1'; d.classList.add('clamp');
+  requestAnimationFrame(()=>{ if(d.scrollHeight<=d.clientHeight+4){ d.classList.remove('clamp'); return; }
+    const v=document.createElement('div'); v.className='vermas'; v.textContent='\u25b8 ver m\u00e1s';
+    v.onclick=()=>{ const c=d.classList.toggle('clamp'); v.textContent=c?'\u25b8 ver m\u00e1s':'\u25be ver menos'; };
+    d.after(v); }); }); }
 let __TAREAS=null;
 async function loadTareas(){ if(__TAREAS) return __TAREAS;
   try{ const r=await fetch(TAREAS_CSV+'&t='+Date.now(),{cache:'no-store'}); if(!r.ok) throw 0;
@@ -488,7 +495,7 @@ async function loadInicio(){
     const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>(x.pend||x.saldo>0)&&!/respuesta|ca\u00eddo|caido/i.test(x.est))
       .sort((a,b)=>(b.saldo>0)-(a.saldo>0));
     const pc=document.getElementById('pendProjCard');
-    if(pc) pc.innerHTML=pendItems.length?pendItems.map(x=>`<div class="todo p2"><div class="txt">${esc(x.cli)}${x.saldo>0?` · <span class="neg">${clp(x.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(x.pend||'—')}</div></div>`).join(''):'<div class="state">Sin pendientes 🎉</div>';
+    if(pc){ pc.innerHTML=pendItems.length?pendItems.map(x=>`<div class="todo p2"><div class="txt">${esc(x.cli)}${x.saldo>0?` · <span class="neg">${clp(x.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(x.pend||'—')}</div></div>`).join(''):'<div class="state">Sin pendientes 🎉</div>'; clampify(pc); }
     const cobradas=rowsD.filter(r=>(r[ci.est]||'').toLowerCase().includes('pagado'));
     facturasHTML=cobradas.map(r=>`<div class="prow"><span class="pk">${esc(r[ci.cli])} · ${esc((r[ci.fac]||'—').replace(/FALTA.*/i,'—'))}</span><span class="pv">${clp(toNum(r[ci.total]))}</span></div>`).join('');
     const dis=rowsD.filter(r=>!/importacion|tela/i.test(r[ci.srv]||'')), imp=rowsD.filter(r=>/importacion|tela/i.test(r[ci.srv]||''));
@@ -667,6 +674,7 @@ function renderProj(){
     html+=`<div class="grp">${tit[g]}</div>`+list.map(projCard).join('');
   });
   $('projList').innerHTML=html||'<div class="state">Nada por aquí.</div>';
+  clampify($('projList'));
 }
 
 /* ---------- PENDIENTES ---------- */
@@ -717,7 +725,7 @@ async function loadAlerts(){
       clearInterval(wait);
       const al=PROJ.filter(p=>p.alerta&&!/^ok$/i.test(p.alerta)&&!/^n\/a/i.test(p.alerta));
       if(!al.length){$('alertList').innerHTML='<div class="state">Sin alertas.</div>';return;}
-      $('alertList').innerHTML=al.map(p=>`<div class="todo p3"><div class="txt">${esc(p.cli)}${p.saldo>0?` · <span class="neg">${clp(p.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(p.alerta)}</div></div>`).join('');
+      $('alertList').innerHTML=al.map(p=>`<div class="todo p3"><div class="txt">${esc(p.cli)}${p.saldo>0?` · <span class="neg">${clp(p.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(p.alerta)}</div></div>`).join(''); clampify($('alertList'));
     }
   },300); setTimeout(()=>clearInterval(wait),6000);
 }
