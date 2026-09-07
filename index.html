@@ -310,6 +310,8 @@ function parseCSV(text){ const rows=[]; let row=[],cur='',q=false;
   return rows; }
 function csvToPipe(text){ return parseCSV(text).map(r=>'| '+String(r[0]||'').replace(/\|/g,' ')+' | '+String(r[1]||'').replace(/\|/g,' ')+' |').join('\n'); }
 function csvToPipeN(text){ return parseCSV(text).filter(r=>r.some(c=>String(c||'').trim()!=='')).map(r=>'| '+r.map(c=>String(c||'').replace(/\|/g,' ').trim()).join(' | ')+' |').join('\n'); }
+const NOPEND=/^\s*sin (pendientes|cobros)/i;
+const hayPend=t=>!!(t&&String(t).trim())&&!NOPEND.test(String(t).trim());
 function clampify(el){ if(!el) return; el.querySelectorAll('.desc,.falta').forEach(d=>{ if(d.dataset.cl) return; d.dataset.cl='1'; d.classList.add('clamp');
   requestAnimationFrame(()=>{ if(d.scrollHeight<=d.clientHeight+4){ d.classList.remove('clamp'); return; }
     const v=document.createElement('div'); v.className='vermas'; v.textContent='\u25b8 ver m\u00e1s';
@@ -492,7 +494,7 @@ async function loadInicio(){
     porCobrarHTML=porcEste.map(r=>`<div class="step"><span class="lab"><span class="op plus">+</span>Cobrar ${esc(r[ci.cli])}</span><span class="amt pos">${clp(toNum(r[ci.saldo]))}</span></div>`).join('')
       +porcFut.map(r=>`<div class="step" style="opacity:.42"><span class="lab">Cobrar ${esc(r[ci.cli])} \u00b7 m\u00e1s adelante</span><span class="amt">${clp(toNum(r[ci.saldo]))}</span></div>`).join('');
     const pendIdx=c('pendiente');
-    const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>(x.pend||x.saldo>0)&&!/respuesta|ca\u00eddo|caido/i.test(x.est))
+    const pendItems=rowsD.map(r=>({cli:r[ci.cli],est:r[ci.est]||'',pend:(pendIdx>=0?(r[pendIdx]||''):'').trim(),saldo:toNum(r[ci.saldo])})).filter(x=>(hayPend(x.pend)||x.saldo>0)&&!/respuesta|ca\u00eddo|caido/i.test(x.est))
       .sort((a,b)=>(b.saldo>0)-(a.saldo>0));
     const pc=document.getElementById('pendProjCard');
     if(pc){ pc.innerHTML=pendItems.length?pendItems.map(x=>`<div class="todo p2"><div class="txt">${esc(x.cli)}${x.saldo>0?` · <span class="neg">${clp(x.saldo)} por cobrar</span>`:''}</div><div class="desc" style="display:block">${esc(x.pend||'—')}</div></div>`).join(''):'<div class="state">Sin pendientes 🎉</div>'; clampify(pc); }
@@ -660,7 +662,7 @@ function projCard(p){
 }
 function projGroup(p){
   if(estadoInfo(p.est,p.srv).group==='Prospectos') return 'Prospectos';
-  return (p.pend||p.saldo>0) ? 'Con pendientes' : 'Anteriores';
+  return (hayPend(p.pend)||p.saldo>0) ? 'Con pendientes' : 'Anteriores';
 }
 function renderProj(){
   const groups=['Con pendientes','Prospectos','Anteriores'];
