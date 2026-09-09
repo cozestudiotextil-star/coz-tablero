@@ -589,7 +589,7 @@ function renderMeta(){
   const runway=sale>0?disp/sale:0, need=sale*meses, falta=Math.max(0,need-disp);
   const cover=meses>0?Math.min(1,runway/meses):0, ok=runway>=meses;
   const nombres=['AGO','SEP','OCT','NOV','DIC'];
-  const blocks=nombres.slice(0,meses||5).map((mn,i)=>{
+  const blocks=nombres.slice(nombres.length-(meses||5)).map((mn,i)=>{
     const fill = runway>=i+1?1 : runway>i?(runway-i) : 0;
     const bg = fill>=1?'#5b8f68' : fill>0?`linear-gradient(90deg,#5b8f68 ${(fill*100).toFixed(0)}%,#efe7f8 ${(fill*100).toFixed(0)}%)` : '#efe7f8';
     const col = fill>0?'#4a4a86':'#b9b6c6';
