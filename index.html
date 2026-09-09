@@ -447,7 +447,7 @@ function parseTable(md){
 }
 
 /* ---------- INICIO (LECTURA) ---------- */
-let VENTAS=0, UTIL=0, UTILREAL=0, CAJAPROJ=0;
+let VENTAS=0, UTIL=0, UTILREAL=0, CAJAPROJ=0, COBRARFUT=0;
 async function loadInicio(){
   const d=await call(T_DRIVE,{fileId:F_MAIN});
   const md=d.fileContent||d.text;
@@ -465,7 +465,8 @@ async function loadInicio(){
         proj=toNum(g('proyeccion fin de mes')), utilReal=toNum(g('por realizar'));
   const telas=toNum(g('costo de telas')), imp=toNum(g('impuestos (iva')), oper=toNum(g('operaci'));
   const cajaHoy=toNum(g('caja hoy')), ctelas=toNum(g('por cobrar telas')), clanima=toNum(g('por cobrar lanima')), pagar=toNum(g('por pagar')), sueldoMes=toNum(g('sueldo pendiente'));
-  VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj;
+  const cobrarFut=toNum(g('adelante'));
+  VENTAS=ventas; UTIL=util; UTILREAL=utilReal; CAJAPROJ=proj; COBRARFUT=cobrarFut;
 
   // INICIO — panel de KPIs (normal)
   const ventasTotal=ventas+prod;
@@ -509,7 +510,7 @@ async function loadInicio(){
 
   // INICIO — meta hasta diciembre (en base a CAJA)
   const sueldoM=getSueldo(), gastosM=getGastosMes(), saleM=sueldoM+gastosM, mesesR=mesesRestantes()||5;
-  const caja=proj, need=saleM*mesesR, cubierto=caja+utilReal, falta=Math.max(0,need-cubierto), runwayM=saleM>0?caja/saleM:0;
+  const caja=proj, need=saleM*mesesR, cubierto=caja+utilReal, falta=Math.max(0,need-cubierto), runwayM=saleM>0?(caja+cobrarFut)/saleM:0;
   const coverM=need>0?Math.min(100,cubierto/need*100):0;
   const mesNom=['agosto','septiembre','octubre','noviembre','diciembre'], hasta=mesNom[Math.min(4,Math.floor(runwayM))];
   const nDis=avgUtilDis>0?Math.ceil(falta/avgUtilDis):0;
@@ -584,8 +585,8 @@ const MESES_C=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov'
 function mesAct(){ return MESES_L[Math.max(new Date().getMonth(),7)]; }
 function mesActC(){ return MESES_C[Math.max(new Date().getMonth(),7)]; }
 function renderMeta(){
-  const sueldo=getSueldo(), gastos=getGastosMes(), sale=sueldo+gastos, caja=CAJAPROJ, meses=mesesRestantes();
-  const runway=sale>0?caja/sale:0, need=sale*meses, falta=Math.max(0,need-caja);
+  const sueldo=getSueldo(), gastos=getGastosMes(), sale=sueldo+gastos, caja=CAJAPROJ, fut=COBRARFUT, disp=caja+fut, meses=mesesRestantes();
+  const runway=sale>0?disp/sale:0, need=sale*meses, falta=Math.max(0,need-disp);
   const cover=meses>0?Math.min(1,runway/meses):0, ok=runway>=meses;
   const nombres=['AGO','SEP','OCT','NOV','DIC'];
   const blocks=nombres.slice(0,meses||5).map((mn,i)=>{
@@ -598,9 +599,11 @@ function renderMeta(){
   $('metaBody').innerHTML=
     `<div class="metapct" style="color:${ok?'var(--ok)':'var(--peri-ink)'};margin-bottom:2px">Te alcanza ~${runway.toFixed(1).replace('.',',')} meses</div>`+
     `<div style="display:flex;gap:7px;margin:14px 0 6px">${blocks}</div>`+
-    `<div class="oneline" style="border-top:0;padding-top:2px;margin-top:4px">Cada bloque = un mes con tu sueldo pagado. Verde = cubierto con la caja de hoy${ok?'; te alcanza todo el tramo.':`; desde ahí necesitas <b>cobrar</b> ${clp(falta)}.`}</div>`+
+    `<div class="oneline" style="border-top:0;padding-top:2px;margin-top:4px">Cada bloque = un mes con tu sueldo pagado. Verde = cubierto con la caja proyectada + los cobros ya confirmados${ok?'; te alcanza todo el tramo.':`; desde ahí necesitas <b>cerrar ventas nuevas</b> por ${clp(falta)}.`}</div>`+
     `<div style="height:8px"></div>`+
     row('Caja para partir', clp(caja))+
+    row('Cobros confirmados por venir', clp(fut))+
+    row('Total disponible', clp(disp), 'tot')+
     row('Sueldo al mes', clp(sueldo))+
     row('Gastos aprox. al mes *', `<span id="editGastos" style="border-bottom:1px dashed var(--muted); cursor:pointer">${clp(gastos)}</span>`)+
     row('Sale cada mes', clp(sale), 'tot')+
